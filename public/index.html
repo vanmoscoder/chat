@@ -1,62 +1,246 @@
-<script src="/socket.io/socket.io.js"></script>
-<script>
-  const socket = io();
-  const messageInput = document.getElementById('messageInput');
-  const sendButton = document.getElementById('sendButton');
-  const messagesList = document.getElementById('messages');
-  const themeToggle = document.getElementById('themeToggle');
-
-  // Load saved theme
-  const savedTheme = localStorage.getItem('chat-theme') || 'dark';
-  if (savedTheme === 'light') {
-    document.body.classList.add('light-mode');
-    themeToggle.textContent = '☀️';
-  }
-
-  // Toggle theme
-  themeToggle.addEventListener('click', () => {
-    const isLight = document.body.classList.toggle('light-mode');
-    localStorage.setItem('chat-theme', isLight ? 'light' : 'dark');
-    themeToggle.textContent = isLight ? '☀️' : '🌙';
-  });
-
-  // Format time
-  function getCurrentTime() {
-    return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Add message to UI
-  function addMessageToUI(message, type) {
-    const li = document.createElement('li');
-    li.className = `message ${type}`;
-    const time = getCurrentTime();
-    li.innerHTML = `<div class="message-text">${message}</div><small>${time}</small>`;
-    messagesList.appendChild(li);
-    messagesList.scrollTop = messagesList.scrollHeight;
-  }
-
-  // Send message
-  function sendMessage() {
-    const message = messageInput.value.trim();
-    if (message) {
-      // Show your message immediately (only once)
-      addMessageToUI(message, 'sent');
-      // Send to server
-      socket.emit('chat message', message);
-      messageInput.value = '';
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #1a1a2e;
+      --bg-secondary: #16213e;
+      --border-color: #3a3a5c;
+      --text-color: #e1e1e6;
+      --sent-bg: #4a6cf7;
+      --received-bg: #2c3e50;
+      --input-bg: #3a3a5c;
+      --transition: all 0.3s ease;
     }
-  }
 
-  sendButton.addEventListener('click', sendMessage);
-  messageInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') sendMessage();
-  });
+    .light-mode {
+      --bg-primary: #f4f6f8;
+      --bg-secondary: #ffffff;
+      --border-color: #dcdcdc;
+      --text-color: #2c3e50;
+      --received-bg: #ecf0f1;
+      --input-bg: #f0f0f0;
+    }
 
-  // Receive message from others (not from you)
-  socket.on('chat message', (msg) => {
-    addMessageToUI(msg, 'received');
-  });
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      transition: var(--transition);
+    }
 
-  // Focus input on load
-  window.onload = () => messageInput.focus();
-</script>
+    body {
+      background: var(--bg-primary);
+      color: var(--text-color);
+      font-family: 'Inter', sans-serif;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .chat-header {
+      padding: 18px 20px;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #themeToggle {
+      margin-left: auto;
+      background: var(--input-bg);
+      color: var(--text-color);
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    #themeToggle:hover {
+      transform: scale(1.05);
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .message {
+      max-width: 70%;
+      padding: 10px 14px;
+      border-radius: 18px;
+      line-height: 1.5;
+      word-wrap: break-word;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .received {
+      background: var(--received-bg);
+      color: var(--text-color);
+      align-self: flex-start;
+    }
+
+    .sent {
+      background: var(--sent-bg);
+      color: white;
+      align-self: flex-end;
+    }
+
+    .message small {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-top: 4px;
+      display: inline-block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .input-area {
+      padding: 15px;
+      display: flex;
+      border-top: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+    }
+
+    #messageInput {
+      flex: 1;
+      padding: 12px 16px;
+      border: none;
+      border-radius: 24px;
+      outline: none;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 0.95rem;
+    }
+
+    #messageInput::placeholder {
+      color: #aaa;
+    }
+
+    #sendButton {
+      margin-left: 10px;
+      padding: 0 20px;
+      background: var(--sent-bg);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    #sendButton:hover {
+      background: #3a5be5;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 10px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-header">
+    <div class="avatar">💬</div>
+    <span>General Chat</span>
+    <button id="themeToggle" title="Switch theme">🌙</button>
+  </div>
+
+  <ul id="messages" class="chat-messages"></ul>
+
+  <div class="input-area">
+    <input id="messageInput" type="text" placeholder="Type a message..." autofocus />
+    <button id="sendButton">Send</button>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const messageInput = document.getElementById('messageInput');
+    const sendButton = document.getElementById('sendButton');
+    const messagesList = document.getElementById('messages');
+    const themeToggle = document.getElementById('themeToggle');
+
+    // Load theme
+    const savedTheme = localStorage.getItem('chat-theme') || 'dark';
+    if (savedTheme === 'light') {
+      document.body.classList.add('light-mode');
+      themeToggle.textContent = '☀️';
+    }
+
+    // Toggle theme
+    themeToggle.addEventListener('click', () => {
+      const isLight = document.body.classList.toggle('light-mode');
+      localStorage.setItem('chat-theme', isLight ? 'light' : 'dark');
+      themeToggle.textContent = isLight ? '☀️' : '🌙';
+    });
+
+    // Format time
+    function getCurrentTime() {
+      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Add message
+    function addMessageToUI(message, type) {
+      const li = document.createElement('li');
+      li.className = `message ${type}`;
+      const time = getCurrentTime();
+      li.innerHTML = `<div class="message-text">${message}</div><small>${time}</small>`;
+      messagesList.appendChild(li);
+      messagesList.scrollTop = messagesList.scrollHeight;
+    }
+
+    // Send message
+    function sendMessage() {
+      const message = messageInput.value.trim();
+      if (message) {
+        addMessageToUI(message, 'sent');
+        socket.emit('chat message', message);
+        messageInput.value = '';
+      }
+    }
+
+    sendButton.addEventListener('click', sendMessage);
+    messageInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+
+    // Receive message from others
+    socket.on('chat message', (msg) => {
+      addMessageToUI(msg, 'received');
+    });
+
+    // Focus input
+    window.onload = () => messageInput.focus();
+  </script>
+</body>
+</html>
