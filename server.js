@@ -8,41 +8,19 @@ const io = socketIo(server);
 
 app.use(express.static('public'));
 
-// Track who is typing
-const typingUsers = new Set();
-
+// When a user connects
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('A user connected:', socket.id);
 
-  // When user starts typing
-  socket.on('typing', (username) => {
-    if (username) {
-      typingUsers.add(username);
-      socket.broadcast.emit('update typing', Array.from(typingUsers));
-    }
+  // When they send a message
+  socket.on('chat message', (msg) => {
+    console.log('Message from', socket.id, ':', msg);
+    // Broadcast to everyone *else* (not back to self)
+    socket.broadcast.emit('chat message', msg);
   });
 
-  // When user stops typing
-  socket.on('stop typing', (username) => {
-    if (username) {
-      typingUsers.delete(username);
-      socket.broadcast.emit('update typing', Array.from(typingUsers));
-    }
-  });
-
-  // Chat message
-  socket.on('chat message', (data) => {
-    io.emit('chat message', data); // Send to everyone
-  });
-
-  // On disconnect
+  // When they disconnect
   socket.on('disconnect', () => {
-    // Remove user from typing list if they disconnect
-    for (let user of typingUsers) {
-      if (user.includes(socket.id) || user === /* you can't know username here, so client handles */ ) {
-        // We’ll clean up on frontend
-      }
-    }
     console.log('User disconnected:', socket.id);
   });
 });
