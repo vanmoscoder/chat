@@ -26,7 +26,7 @@
       --text-color: #2c3e50;
       --received-bg: #ecf0f1;
       --input-bg: #f0f0f0;
-      --reaction-color: #e67e22;
+      --reaction-color: #8e44ad;
     }
 
     * {
@@ -202,70 +202,6 @@
       margin-top: 2px;
     }
 
-    /* Reaction buttons */
-    .reactions {
-      display: flex;
-      gap: 8px;
-      margin-top: 6px;
-      flex-wrap: wrap;
-    }
-
-    .reaction-btn {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      font-size: 0.85rem;
-      color: var(--text-color);
-      cursor: pointer;
-      background: transparent;
-      border: none;
-      padding: 4px;
-      border-radius: 4px;
-      transition: background 0.2s;
-    }
-
-    .reaction-btn:hover {
-      background: rgba(255, 255, 255, 0.1);
-    }
-
-    .reaction-count {
-      font-size: 0.75rem;
-      opacity: 0.8;
-    }
-
-    /* Reaction popup */
-    .emoji-popup {
-      position: absolute;
-      bottom: 100%;
-      left: 50%;
-      transform: translateX(-50%);
-      background: var(--bg-secondary);
-      border: 1px solid var(--border-color);
-      border-radius: 8px;
-      padding: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      z-index: 1001;
-      display: none;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .emoji-popup.show {
-      display: flex;
-    }
-
-    .emoji-btn {
-      font-size: 1.2rem;
-      cursor: pointer;
-      padding: 4px;
-      border-radius: 4px;
-      transition: transform 0.1s;
-    }
-
-    .emoji-btn:hover {
-      transform: scale(1.1);
-    }
-
     .message strong {
       display: block;
       font-size: 0.95rem;
@@ -277,6 +213,66 @@
       opacity: 0.8;
       margin-top: 4px;
       display: inline-block;
+    }
+
+    /* Reaction container */
+    .reactions {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .reaction {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--reaction-color);
+    }
+
+    .reaction span {
+      font-size: 1.1rem;
+    }
+
+    .reaction-count {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+
+    /* Reaction picker */
+    .reaction-picker {
+      position: absolute;
+      bottom: 60px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 10px;
+      display: flex;
+      gap: 10px;
+      z-index: 100;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.2s, visibility 0.2s;
+    }
+
+    .reaction-picker.show {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .emoji {
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .emoji:hover {
+      transform: scale(1.1);
     }
 
     /* Image styling */
@@ -333,370 +329,4 @@
       font-size: 0.95rem;
     }
 
-    #attachButton {
-      margin-right: 10px;
-      background: var(--input-bg);
-      color: var(--text-color);
-      border: none;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 1.2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    #sendButton {
-      margin-left: 10px;
-      padding: 0 20px;
-      background: var(--sent-bg);
-      color: white;
-      border: none;
-      border-radius: 24px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    #sendButton:hover,
-    #attachButton:hover {
-      opacity: 0.95;
-    }
-
-    /* Responsive for Phones */
-    @media (max-width: 600px) {
-      .chat-header { padding: 14px 16px; font-size: 1.0rem; }
-      .chat-header .avatar { width: 32px; height: 32px; }
-      #themeToggle, #attachButton { width: 36px; height: 36px; }
-      .chat-messages { padding: 16px 12px; }
-      .message { max-width: 80%; padding: 9px 12px; }
-      .message strong { font-size: 0.9rem; }
-      .message small { font-size: 0.7rem; }
-      .input-area { padding: 12px; }
-      #messageInput { padding: 10px 14px; }
-      #sendButton, #attachButton { font-size: 0.95rem; }
-    }
-  </style>
-</head>
-<body>
-  <!-- Username Modal -->
-  <div id="usernameModal">
-    <div class="modal-content">
-      <h2>Welcome! 👋</h2>
-      <p>Please enter your username to start chatting.</p>
-      <input type="text" id="usernameInput" placeholder="Your name..." autofocus />
-      <button id="joinButton">Join Chat</button>
-    </div>
-  </div>
-
-  <!-- Chat Container -->
-  <div id="chatContainer">
-    <div class="chat-header">
-      <div class="avatar">💬</div>
-      <span>General Chat</span>
-      <button id="themeToggle" title="Switch theme">🌙</button>
-    </div>
-
-    <ul id="messages" class="chat-messages"></ul>
-
-    <div class="input-area">
-      <input type="file" id="fileInput" accept="image/*" />
-      <button id="attachButton" title="Attach image">📎</button>
-      <input id="messageInput" type="text" placeholder="Type a message..." />
-      <button id="sendButton">Send</button>
-    </div>
-  </div>
-
-  <!-- Fullscreen Image Viewer -->
-  <div id="fullscreenView" class="fullscreen" style="display: none;">
-    <img id="fullscreenImg" src="" alt="Fullscreen Image" />
-  </div>
-
-  <!-- Socket.IO -->
-  <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const usernameModal = document.getElementById('usernameModal');
-    const chatContainer = document.getElementById('chatContainer');
-    const usernameInput = document.getElementById('usernameInput');
-    const joinButton = document.getElementById('joinButton');
-    const messageInput = document.getElementById('messageInput');
-    const sendButton = document.getElementById('sendButton');
-    const attachButton = document.getElementById('attachButton');
-    const fileInput = document.getElementById('fileInput');
-    const messagesList = document.getElementById('messages');
-    const themeToggle = document.getElementById('themeToggle');
-    const fullscreenView = document.getElementById('fullscreenView');
-    const fullscreenImg = document.getElementById('fullscreenImg');
-
-    let username = null;
-    let replyTo = null;
-
-    // Load saved username and theme
-    const savedUsername = localStorage.getItem('chat-username');
-    const savedTheme = localStorage.getItem('chat-theme') || 'dark';
-
-    if (savedTheme === 'light') {
-      document.body.classList.add('light-mode');
-      themeToggle.textContent = '☀️';
-    }
-
-    if (savedUsername) {
-      username = savedUsername;
-      showChat();
-    }
-
-    // Join chat
-    function joinChat() {
-      const name = usernameInput.value.trim();
-      if (name) {
-        username = name;
-        localStorage.setItem('chat-username', name);
-        showChat();
-      } else {
-        alert('Please enter a username!');
-      }
-    }
-
-    joinButton.addEventListener('click', joinChat);
-    usernameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') joinChat();
-    });
-
-    function showChat() {
-      usernameModal.style.display = 'none';
-      chatContainer.style.display = 'flex';
-      messageInput.focus();
-    }
-
-    // Theme toggle
-    themeToggle.addEventListener('click', () => {
-      const isLight = document.body.classList.toggle('light-mode');
-      localStorage.setItem('chat-theme', isLight ? 'light' : 'dark');
-      themeToggle.textContent = isLight ? '☀️' : '🌙';
-    });
-
-    // Format time
-    function getCurrentTime() {
-      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // Add message or image to UI
-    function addMessageToUI(content, type, sender, isImage = false, reply = null) {
-      const li = document.createElement('li');
-      li.className = `message ${type}`;
-      li.dataset.messageId = Date.now();
-
-      const time = getCurrentTime();
-      let replyHTML = '';
-      if (reply) {
-        const isReplyImage = reply.type === 'image';
-        replyHTML = `
-          <div class="reply-to">
-            <strong>${reply.sender}:</strong>
-            ${isReplyImage 
-              ? '<img src="' + reply.content + '" alt="Replied image" />' 
-              : '<span class="message-text">' + reply.content + '</span>'
-            }
-          </div>
-        `;
-      }
-
-      if (isImage) {
-        li.innerHTML = `
-          <strong>${sender}:</strong>
-          ${replyHTML}
-          <img src="${content}" alt="Shared image" />
-          <small>${time}</small>
-        `;
-      } else {
-        li.innerHTML = `
-          <strong>${sender}:</strong>
-          ${replyHTML}
-          <div class="message-text">${content}</div>
-          <small>${time}</small>
-        `;
-      }
-
-      // Add reaction button
-      const reactBtn = document.createElement('button');
-      reactBtn.className = 'reaction-btn';
-      reactBtn.innerHTML = '❤️'; // Placeholder emoji
-      reactBtn.title = 'React';
-      reactBtn.onclick = () => openEmojiPopup(li);
-      li.appendChild(reactBtn);
-
-      // Add reactions container
-      const reactionsDiv = document.createElement('div');
-      reactionsDiv.className = 'reactions';
-      li.appendChild(reactionsDiv);
-
-      messagesList.appendChild(li);
-      messagesList.scrollTop = messagesList.scrollHeight;
-
-      // Click to zoom image
-      const img = li.querySelector('img[alt="Shared image"]');
-      if (img) {
-        img.addEventListener('click', () => {
-          fullscreenImg.src = img.src;
-          fullscreenView.style.display = 'flex';
-        });
-      }
-    }
-
-    // Open emoji popup
-    function openEmojiPopup(messageElement) {
-      const emojiPopup = document.createElement('div');
-      emojiPopup.className = 'emoji-popup';
-      emojiPopup.innerHTML = `
-        <span class="emoji-btn">👍</span>
-        <span class="emoji-btn">😂</span>
-        <span class="emoji-btn">❤️</span>
-        <span class="emoji-btn">🎉</span>
-        <span class="emoji-btn">👏</span>
-        <span class="emoji-btn">🚀</span>
-      `;
-      messageElement.appendChild(emojiPopup);
-
-      // Close when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!emojiPopup.contains(e.target)) {
-          emojiPopup.remove();
-        }
-      });
-
-      // Handle emoji selection
-      emojiPopup.querySelectorAll('.emoji-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const emoji = btn.textContent;
-          const messageId = messageElement.dataset.messageId;
-          const user = username;
-
-          // Send reaction
-          socket.emit('chat reaction', { messageId, emoji, user });
-
-          // Remove popup
-          emojiPopup.remove();
-
-          // Add reaction to UI
-          const reactionsDiv = messageElement.querySelector('.reactions');
-          const existing = reactionsDiv.querySelector(`[data-emoji="${emoji}"]`);
-          if (existing) {
-            existing.querySelector('.reaction-count').textContent = parseInt(existing.querySelector('.reaction-count').textContent) + 1;
-          } else {
-            const reaction = document.createElement('button');
-            reaction.className = 'reaction-btn';
-            reaction.dataset.emoji = emoji;
-            reaction.innerHTML = `<span>${emoji}</span><span class="reaction-count">1</span>`;
-            reaction.onclick = () => {
-              // Show count on click
-              const count = reaction.querySelector('.reaction-count');
-              count.textContent = parseInt(count.textContent) + 1;
-            };
-            reactionsDiv.appendChild(reaction);
-          }
-        });
-      });
-    }
-
-    // Fullscreen image close
-    fullscreenView.addEventListener('click', () => {
-      fullscreenView.style.display = 'none';
-    });
-
-    // Send message
-    function sendMessage() {
-      const message = messageInput.value.trim();
-      if (message) {
-        addMessageToUI(message, 'sent', 'You', false, replyTo);
-        socket.emit('chat message', { 
-          user: username, 
-          message: message, 
-          reply: replyTo 
-        });
-        messageInput.value = '';
-        clearReply();
-      }
-    }
-
-    sendButton.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    // Attach image
-    attachButton.addEventListener('click', () => {
-      fileInput.click();
-    });
-
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const imageData = event.target.result;
-
-          addMessageToUI(imageData, 'sent', 'You', true, replyTo);
-          socket.emit('chat image', { 
-            user: username, 
-            image: imageData, 
-            reply: replyTo 
-          });
-
-          fileInput.value = '';
-          clearReply();
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    // Receive text message
-    socket.on('chat message', (data) => {
-      addMessageToUI(data.message, 'received', data.user, false, data.reply || null);
-    });
-
-    // Receive image
-    socket.on('chat image', (data) => {
-      addMessageToUI(data.image, 'received', data.user, true, data.reply || null);
-    });
-
-    // Receive reaction
-    socket.on('chat reaction', (data) => {
-      const messageElement = document.querySelector(`[data-message-id="${data.messageId}"]`);
-      if (messageElement) {
-        const reactionsDiv = messageElement.querySelector('.reactions');
-        const existing = reactionsDiv.querySelector(`[data-emoji="${data.emoji}"]`);
-        if (existing) {
-          existing.querySelector('.reaction-count').textContent = parseInt(existing.querySelector('.reaction-count').textContent) + 1;
-        } else {
-          const reaction = document.createElement('button');
-          reaction.className = 'reaction-btn';
-          reaction.dataset.emoji = data.emoji;
-          reaction.innerHTML = `<span>${data.emoji}</span><span class="reaction-count">1</span>`;
-          reaction.onclick = () => {
-            const count = reaction.querySelector('.reaction-count');
-            count.textContent = parseInt(count.textContent) + 1;
-          };
-          reactionsDiv.appendChild(reaction);
-        }
-      }
-    });
-
-    // Clear reply
-    function clearReply() {
-      replyTo = null;
-      messageInput.placeholder = 'Type a message...';
-    }
-
-    // Focus input
-    window.onload = () => {
-      if (username) messageInput.focus();
-    };
-  </script>
-</body>
-</html>
+    #attach
