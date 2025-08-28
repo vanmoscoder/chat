@@ -180,22 +180,23 @@
       display: inline-block;
     }
 
-    /* Image in message */
+    /* Image styling */
     .message img {
       max-width: 100%;
       border-radius: 12px;
       margin-top: 8px;
       cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.1);
     }
 
-    /* Fullscreen image view */
+    /* Fullscreen image viewer */
     .fullscreen {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0, 0, 0, 0.95);
       display: flex;
       justify-content: center;
       align-items: center;
@@ -204,9 +205,10 @@
     }
 
     .fullscreen img {
-      max-width: 90%;
-      max-height: 90%;
-      border-radius: 0;
+      max-width: 90vw;
+      max-height: 90vh;
+      border-radius: 8px;
+      object-fit: contain;
     }
 
     @keyframes fadeIn {
@@ -232,17 +234,6 @@
       font-size: 0.95rem;
     }
 
-    #sendButton {
-      margin-left: 10px;
-      padding: 0 20px;
-      background: var(--sent-bg);
-      color: white;
-      border: none;
-      border-radius: 24px;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
     #attachButton {
       margin-right: 10px;
       background: var(--input-bg);
@@ -262,11 +253,23 @@
       display: none;
     }
 
-    #sendButton:hover, #attachButton:hover {
-      opacity: 0.9;
+    #sendButton {
+      margin-left: 10px;
+      padding: 0 20px;
+      background: var(--sent-bg);
+      color: white;
+      border: none;
+      border-radius: 24px;
+      cursor: pointer;
+      font-weight: 500;
     }
 
-    /* Responsive */
+    #sendButton:hover,
+    #attachButton:hover {
+      opacity: 0.95;
+    }
+
+    /* Responsive for Phones */
     @media (max-width: 600px) {
       .chat-header { padding: 14px 16px; font-size: 1.0rem; }
       .chat-header .avatar { width: 32px; height: 32px; }
@@ -312,12 +315,13 @@
 
   <!-- Fullscreen Image Viewer -->
   <div id="fullscreenView" class="fullscreen" style="display: none;">
-    <img id="fullscreenImg" src="" alt="Fullscreen" />
+    <img id="fullscreenImg" src="" alt="Fullscreen Image" />
   </div>
 
-  <!-- Socket.IO -->
+  <!-- Socket.IO Client -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
+    // Socket connection
     const socket = io();
     const usernameModal = document.getElementById('usernameModal');
     const chatContainer = document.getElementById('chatContainer');
@@ -348,6 +352,7 @@
       showChat();
     }
 
+    // Join chat with username
     function joinChat() {
       const name = usernameInput.value.trim();
       if (name) {
@@ -364,6 +369,7 @@
       if (e.key === 'Enter') joinChat();
     });
 
+    // Show chat UI after login
     function showChat() {
       usernameModal.style.display = 'none';
       chatContainer.style.display = 'flex';
@@ -377,12 +383,12 @@
       themeToggle.textContent = isLight ? '☀️' : '🌙';
     });
 
-    // Format time
+    // Format current time
     function getCurrentTime() {
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Add message or image to UI
+    // Add message or image to chat
     function addMessageToUI(content, type, sender, isImage = false) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
@@ -405,7 +411,7 @@
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
 
-      // Click to zoom image
+      // Enable image zoom
       const img = li.querySelector('img');
       if (img) {
         img.addEventListener('click', () => {
@@ -415,7 +421,7 @@
       }
     }
 
-    // Fullscreen image close
+    // Close fullscreen image
     fullscreenView.addEventListener('click', () => {
       fullscreenView.style.display = 'none';
     });
@@ -435,7 +441,7 @@
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Attach image
+    // Attach and send image
     attachButton.addEventListener('click', () => {
       fileInput.click();
     });
@@ -447,10 +453,10 @@
         reader.onload = function(event) {
           const imageData = event.target.result;
 
-          // Show image in chat
+          // Show image in your chat
           addMessageToUI(imageData, 'sent', 'You', true);
 
-          // Send to server
+          // Send to others
           socket.emit('chat image', { user: username, image: imageData });
 
           // Reset input
@@ -460,17 +466,17 @@
       }
     });
 
-    // Receive text message
+    // Receive text message from others
     socket.on('chat message', (data) => {
       addMessageToUI(data.message, 'received', data.user);
     });
 
-    // Receive image
+    // Receive image from others
     socket.on('chat image', (data) => {
       addMessageToUI(data.image, 'received', data.user, true);
     });
 
-    // Focus input
+    // Focus input on load
     window.onload = () => {
       if (username) messageInput.focus();
     };
