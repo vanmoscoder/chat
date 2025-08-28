@@ -8,18 +8,19 @@ const io = socketIo(server);
 
 app.use(express.static('public'));
 
-// When a user connects
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  console.log('User connected:', socket.id);
 
-  // When they send a message
-  socket.on('chat message', (msg) => {
-    console.log('Message from', socket.id, ':', msg);
-    // Broadcast to everyone *else* (not back to self)
-    socket.broadcast.emit('chat message', msg);
+  // Text message
+  socket.on('chat message', (data) => {
+    io.emit('chat message', data);
   });
 
-  // When they disconnect
+  // Image message
+  socket.on('chat image', (data) => {
+    io.emit('chat image', data);
+  });
+
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
   });
