@@ -98,7 +98,7 @@
       background: #3a5be5;
     }
 
-    /* Chat UI (hidden until login) */
+    /* Chat UI */
     #chatContainer {
       display: none;
       flex-direction: column;
@@ -180,6 +180,15 @@
       display: inline-block;
     }
 
+    .system-message {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #aaa;
+      padding: 8px;
+      font-style: italic;
+      list-style: none;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -247,7 +256,7 @@
     </div>
   </div>
 
-  <!-- Chat Container (hidden until login) -->
+  <!-- Chat Container -->
   <div id="chatContainer">
     <div class="chat-header">
       <div class="avatar">💬</div>
@@ -278,16 +287,15 @@
 
     let username = null;
 
-    // Load saved username and theme
-    const savedUsername = localStorage.getItem('chat-username');
+    // Load saved theme
     const savedTheme = localStorage.getItem('chat-theme') || 'dark';
-
     if (savedTheme === 'light') {
       document.body.classList.add('light-mode');
       themeToggle.textContent = '☀️';
     }
 
-    // If username exists, skip modal
+    // Load saved username
+    const savedUsername = localStorage.getItem('chat-username');
     if (savedUsername) {
       username = savedUsername;
       showChat();
@@ -300,6 +308,7 @@
         username = name;
         localStorage.setItem('chat-username', name);
         showChat();
+        socket.emit('user joined', username); // Notify others
       } else {
         alert('Please enter a username!');
       }
@@ -332,14 +341,12 @@
     function addMessageToUI(message, type, sender) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
-
       const time = getCurrentTime();
       li.innerHTML = `
         <strong>${sender}:</strong>
         <div class="message-text">${message}</div>
         <small>${time}</small>
       `;
-      
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
     }
@@ -359,9 +366,18 @@
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Receive message
+    // Receive chat message
     socket.on('chat message', (data) => {
       addMessageToUI(data.message, 'received', data.user);
+    });
+
+    // Receive system message (joined/left)
+    socket.on('system message', (msg) => {
+      const li = document.createElement('li');
+      li.className = 'system-message';
+      li.textContent = msg;
+      messagesList.appendChild(li);
+      messagesList.scrollTop = messagesList.scrollHeight;
     });
 
     // Focus input on load
