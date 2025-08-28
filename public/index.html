@@ -100,13 +100,7 @@
       background: #3a5be5;
     }
 
-    /* Chat UI */
-    #chatContainer {
-      display: none;
-      flex-direction: column;
-      height: 100%;
-    }
-
+    /* Chat Header */
     .chat-header {
       padding: 18px 20px;
       background: var(--bg-secondary);
@@ -117,6 +111,30 @@
       display: flex;
       align-items: center;
       gap: 10px;
+    }
+
+    /* Typewriter Chat-Up */
+    .chat-title {
+      font-family: 'Inter', sans-serif;
+      font-style: italic;
+      font-weight: 500;
+      font-size: 1.3rem;
+      color: white;
+      letter-spacing: 0.5px;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background: white;
+      margin-left: 4px;
+      animation: blink 1s step-end infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
     }
 
     #themeToggle {
@@ -139,6 +157,7 @@
       transform: scale(1.05);
     }
 
+    /* Chat Messages */
     .chat-messages {
       flex: 1;
       padding: 20px;
@@ -303,11 +322,10 @@
       opacity: 0.95;
     }
 
-    /* Responsive for Phones */
+    /* Responsive */
     @media (max-width: 600px) {
       .chat-header { padding: 14px 16px; font-size: 1.0rem; }
-      .chat-header .avatar { width: 32px; height: 32px; }
-      #themeToggle, #attachButton { width: 36px; height: 36px; }
+      .chat-title { font-size: 1.1rem; }
       .chat-messages { padding: 16px 12px; }
       .message { max-width: 80%; padding: 9px 12px; }
       .message strong { font-size: 0.9rem; }
@@ -332,8 +350,7 @@
   <!-- Chat Container -->
   <div id="chatContainer">
     <div class="chat-header">
-      <div class="avatar">💬</div>
-      <span>General Chat</span>
+      <div class="chat-title" id="typewriter"></div>
       <button id="themeToggle" title="Switch theme">🌙</button>
     </div>
 
@@ -368,6 +385,7 @@
     const themeToggle = document.getElementById('themeToggle');
     const fullscreenView = document.getElementById('fullscreenView');
     const fullscreenImg = document.getElementById('fullscreenImg');
+    const typewriter = document.getElementById('typewriter');
 
     let username = null;
     let replyTo = null;
@@ -384,6 +402,26 @@
     if (savedUsername) {
       username = savedUsername;
       showChat();
+    }
+
+    // Typewriter effect
+    function typeText(element, text, speed = 150, callback) {
+      let i = 0;
+      element.textContent = '';
+      const cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      element.appendChild(cursor);
+
+      function typing() {
+        if (i < text.length) {
+          element.insertBefore(document.createTextNode(text.charAt(i)), cursor);
+          i++;
+          setTimeout(typing, speed);
+        } else if (callback) {
+          callback();
+        }
+      }
+      typing();
     }
 
     // Join chat
@@ -408,6 +446,8 @@
       usernameModal.style.display = 'none';
       chatContainer.style.display = 'flex';
       messageInput.focus();
+      // Start typewriter effect
+      typeText(typewriter, 'Chat-Up', 180);
     }
 
     // Theme toggle
@@ -544,7 +584,10 @@
 
     // Focus input
     window.onload = () => {
-      if (username) messageInput.focus();
+      if (username) {
+        messageInput.focus();
+        typeText(typewriter, 'Chat-Up', 180);
+      }
     };
   </script>
 </body>
