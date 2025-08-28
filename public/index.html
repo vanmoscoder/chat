@@ -370,7 +370,7 @@
     const fullscreenImg = document.getElementById('fullscreenImg');
 
     let username = null;
-    let replyTo = null; // Track which message we're replying to
+    let replyTo = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -403,6 +403,7 @@
       if (e.key === 'Enter') joinChat();
     });
 
+    // Show chat UI
     function showChat() {
       usernameModal.style.display = 'none';
       chatContainer.style.display = 'flex';
@@ -421,11 +422,11 @@
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Add message or image to UI
+    // Add message to UI
     function addMessageToUI(content, type, sender, isImage = false, reply = null) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
-      li.dataset.messageId = Date.now(); // Simple ID for reply tracking
+      li.dataset.messageId = Date.now();
 
       const time = getCurrentTime();
       let replyHTML = '';
@@ -458,16 +459,16 @@
         `;
       }
 
-      // Make entire message clickable to reply
+      // Long-press to reply
       li.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        setReply(li, sender, content, isImage);
+        setReply(sender, content, isImage);
       });
 
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
 
-      // Click to zoom image
+      // Click image to zoom
       const img = li.querySelector('img[alt="Shared image"]');
       if (img) {
         img.addEventListener('click', () => {
@@ -477,8 +478,8 @@
       }
     }
 
-    // Set reply target
-    function setReply(msgElement, sender, content, isImage) {
+    // Set reply
+    function setReply(sender, content, isImage) {
       replyTo = { sender, content, type: isImage ? 'image' : 'text' };
       messageInput.placeholder = `Reply to ${sender}...`;
       messageInput.focus();
@@ -500,11 +501,7 @@
       const message = messageInput.value.trim();
       if (message) {
         addMessageToUI(message, 'sent', 'You', false, replyTo);
-        socket.emit('chat message', { 
-          user: username, 
-          message: message, 
-          reply: replyTo 
-        });
+        socket.emit('chat message', { user: username, message, reply: replyTo });
         messageInput.value = '';
         clearReply();
       }
@@ -526,14 +523,8 @@
         const reader = new FileReader();
         reader.onload = function(event) {
           const imageData = event.target.result;
-
           addMessageToUI(imageData, 'sent', 'You', true, replyTo);
-          socket.emit('chat image', { 
-            user: username, 
-            image: imageData, 
-            reply: replyTo 
-          });
-
+          socket.emit('chat image', { user: username, image: imageData, reply: replyTo });
           fileInput.value = '';
           clearReply();
         };
