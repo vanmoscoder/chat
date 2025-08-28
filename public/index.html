@@ -14,6 +14,7 @@
       --sent-bg: #4a6cf7;
       --received-bg: #2c3e50;
       --input-bg: #3a3a5c;
+      --reply-color: #f1c40f;
       --transition: all 0.3s ease;
     }
 
@@ -24,6 +25,7 @@
       --text-color: #2c3e50;
       --received-bg: #ecf0f1;
       --input-bg: #f0f0f0;
+      --reply-color: #e67e22;
     }
 
     * {
@@ -153,6 +155,7 @@
       line-height: 1.5;
       word-wrap: break-word;
       animation: fadeIn 0.3s ease-out;
+      position: relative;
     }
 
     .received {
@@ -165,6 +168,37 @@
       background: var(--sent-bg);
       color: white;
       align-self: flex-end;
+    }
+
+    /* Reply indicator */
+    .reply-to {
+      display: flex;
+      background: rgba(0, 0, 0, 0.1);
+      border-left: 3px solid var(--reply-color);
+      padding: 6px 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .reply-to strong {
+      font-size: 0.9rem;
+    }
+
+    .reply-to .message-text {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .reply-to img {
+      max-width: 40px;
+      border-radius: 6px;
+      margin-top: 2px;
     }
 
     .message strong {
@@ -318,10 +352,9 @@
     <img id="fullscreenImg" src="" alt="Fullscreen Image" />
   </div>
 
-  <!-- Socket.IO Client -->
+  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
-    // Socket connection
     const socket = io();
     const usernameModal = document.getElementById('usernameModal');
     const chatContainer = document.getElementById('chatContainer');
@@ -337,6 +370,7 @@
     const fullscreenImg = document.getElementById('fullscreenImg');
 
     let username = null;
+    let replyTo = null; // Track which message we're replying to
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -352,7 +386,7 @@
       showChat();
     }
 
-    // Join chat with username
+    // Join chat
     function joinChat() {
       const name = usernameInput.value.trim();
       if (name) {
@@ -369,7 +403,6 @@
       if (e.key === 'Enter') joinChat();
     });
 
-    // Show chat UI after login
     function showChat() {
       usernameModal.style.display = 'none';
       chatContainer.style.display = 'flex';
@@ -383,36 +416,59 @@
       themeToggle.textContent = isLight ? '☀️' : '🌙';
     });
 
-    // Format current time
+    // Format time
     function getCurrentTime() {
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Add message or image to chat
-    function addMessageToUI(content, type, sender, isImage = false) {
+    // Add message or image to UI
+    function addMessageToUI(content, type, sender, isImage = false, reply = null) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
+      li.dataset.messageId = Date.now(); // Simple ID for reply tracking
 
       const time = getCurrentTime();
+      let replyHTML = '';
+      if (reply) {
+        const isReplyImage = reply.type === 'image';
+        replyHTML = `
+          <div class="reply-to">
+            <strong>${reply.sender}:</strong>
+            ${isReplyImage 
+              ? '<img src="' + reply.content + '" alt="Replied image" />' 
+              : '<span class="message-text">' + reply.content + '</span>'
+            }
+          </div>
+        `;
+      }
+
       if (isImage) {
         li.innerHTML = `
           <strong>${sender}:</strong>
+          ${replyHTML}
           <img src="${content}" alt="Shared image" />
           <small>${time}</small>
         `;
       } else {
         li.innerHTML = `
           <strong>${sender}:</strong>
+          ${replyHTML}
           <div class="message-text">${content}</div>
           <small>${time}</small>
         `;
       }
 
+      // Make entire message clickable to reply
+      li.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        setReply(li, sender, content, isImage);
+      });
+
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
 
-      // Enable image zoom
-      const img = li.querySelector('img');
+      // Click to zoom image
+      const img = li.querySelector('img[alt="Shared image"]');
       if (img) {
         img.addEventListener('click', () => {
           fullscreenImg.src = img.src;
@@ -421,18 +477,36 @@
       }
     }
 
-    // Close fullscreen image
+    // Set reply target
+    function setReply(msgElement, sender, content, isImage) {
+      replyTo = { sender, content, type: isImage ? 'image' : 'text' };
+      messageInput.placeholder = `Reply to ${sender}...`;
+      messageInput.focus();
+    }
+
+    // Clear reply
+    function clearReply() {
+      replyTo = null;
+      messageInput.placeholder = 'Type a message...';
+    }
+
+    // Fullscreen image close
     fullscreenView.addEventListener('click', () => {
       fullscreenView.style.display = 'none';
     });
 
-    // Send text message
+    // Send message
     function sendMessage() {
       const message = messageInput.value.trim();
       if (message) {
-        addMessageToUI(message, 'sent', 'You');
-        socket.emit('chat message', { user: username, message: message });
+        addMessageToUI(message, 'sent', 'You', false, replyTo);
+        socket.emit('chat message', { 
+          user: username, 
+          message: message, 
+          reply: replyTo 
+        });
         messageInput.value = '';
+        clearReply();
       }
     }
 
@@ -441,7 +515,7 @@
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Attach and send image
+    // Attach image
     attachButton.addEventListener('click', () => {
       fileInput.click();
     });
@@ -453,30 +527,31 @@
         reader.onload = function(event) {
           const imageData = event.target.result;
 
-          // Show image in your chat
-          addMessageToUI(imageData, 'sent', 'You', true);
+          addMessageToUI(imageData, 'sent', 'You', true, replyTo);
+          socket.emit('chat image', { 
+            user: username, 
+            image: imageData, 
+            reply: replyTo 
+          });
 
-          // Send to others
-          socket.emit('chat image', { user: username, image: imageData });
-
-          // Reset input
           fileInput.value = '';
+          clearReply();
         };
         reader.readAsDataURL(file);
       }
     });
 
-    // Receive text message from others
+    // Receive text message
     socket.on('chat message', (data) => {
-      addMessageToUI(data.message, 'received', data.user);
+      addMessageToUI(data.message, 'received', data.user, false, data.reply || null);
     });
 
-    // Receive image from others
+    // Receive image
     socket.on('chat image', (data) => {
-      addMessageToUI(data.image, 'received', data.user, true);
+      addMessageToUI(data.image, 'received', data.user, true, data.reply || null);
     });
 
-    // Focus input on load
+    // Focus input
     window.onload = () => {
       if (username) messageInput.focus();
     };
