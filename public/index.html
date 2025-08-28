@@ -14,7 +14,7 @@
       --sent-bg: #4a6cf7;
       --received-bg: #2c3e50;
       --input-bg: #3a3a5c;
-      --online-color: #4CAF50;
+      --reply-color: #f1c40f;
       --transition: all 0.3s ease;
     }
 
@@ -25,7 +25,7 @@
       --text-color: #2c3e50;
       --received-bg: #ecf0f1;
       --input-bg: #f0f0f0;
-      --online-color: #4CAF50;
+      --reply-color: #e67e22;
     }
 
     * {
@@ -170,39 +170,41 @@
       align-self: flex-end;
     }
 
-    /* Online indicator */
-    .online-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--online-color);
-      position: absolute;
-      top: 5px;
-      right: -10px;
-      border: 2px solid var(--bg-secondary);
-      box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+    /* Reply indicator */
+    .reply-to {
+      display: flex;
+      background: rgba(0, 0, 0, 0.1);
+      border-left: 3px solid var(--reply-color);
+      padding: 6px 10px;
+      margin-bottom: 8px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .reply-to strong {
+      font-size: 0.9rem;
+    }
+
+    .reply-to .message-text {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .reply-to img {
+      max-width: 40px;
+      border-radius: 6px;
+      margin-top: 2px;
     }
 
     .message strong {
       display: block;
       font-size: 0.95rem;
       margin-bottom: 4px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .message strong span {
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: transparent;
-    }
-
-    .message strong span.online {
-      background: var(--online-color);
     }
 
     .message small {
@@ -368,6 +370,7 @@
     const fullscreenImg = document.getElementById('fullscreenImg');
 
     let username = null;
+    let replyTo = null; // Track which message we're replying to
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -422,7 +425,7 @@
     function addMessageToUI(content, type, sender, isImage = false, reply = null) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
-      li.dataset.messageId = Date.now();
+      li.dataset.messageId = Date.now(); // Simple ID for reply tracking
 
       const time = getCurrentTime();
       let replyHTML = '';
@@ -552,64 +555,6 @@
     window.onload = () => {
       if (username) messageInput.focus();
     };
-
-    // Track online users
-    const onlineUsers = new Map();
-
-    // When user connects
-    socket.on('connect', () => {
-      console.log('Connected to server');
-    });
-
-    // When user joins
-    socket.on('user joined', (userData) => {
-      onlineUsers.set(userData.username, true);
-      updateOnlineStatus();
-    });
-
-    // When user leaves
-    socket.on('user left', (username) => {
-      onlineUsers.delete(username);
-      updateOnlineStatus();
-    });
-
-    // Update online status in all messages
-    function updateOnlineStatus() {
-      const messages = document.querySelectorAll('.message');
-      messages.forEach(msg => {
-        const sender = msg.querySelector('strong').textContent.split(':')[0];
-        const isOnline = onlineUsers.has(sender);
-        const statusSpan = msg.querySelector('strong span');
-        if (statusSpan) {
-          statusSpan.className = isOnline ? 'online' : '';
-        }
-      });
-    }
-
-    // Send own username when joining
-    socket.on('connect', () => {
-      if (username) {
-        socket.emit('user joined', { username });
-      }
-    });
-
-    // Listen for user joins and leaves
-    socket.on('user joined', (data) => {
-      console.log(`${data.username} joined`);
-      onlineUsers.set(data.username, true);
-      updateOnlineStatus();
-    });
-
-    socket.on('user left', (username) => {
-      console.log(`${username} left`);
-      onlineUsers.delete(username);
-      updateOnlineStatus();
-    });
-
-    // Handle disconnection
-    socket.on('disconnect', () => {
-      console.log('Disconnected from server');
-    });
   </script>
 </body>
 </html>
