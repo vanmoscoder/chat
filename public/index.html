@@ -98,7 +98,7 @@
       background: #3a5be5;
     }
 
-    /* Chat UI */
+    /* Chat UI (hidden until login) */
     #chatContainer {
       display: none;
       flex-direction: column;
@@ -185,23 +185,6 @@
       to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Typing Indicator */
-    #typingIndicator {
-      padding: 8px 20px;
-      font-size: 0.9rem;
-      color: #4a6cf7;
-      background: rgba(74, 108, 247, 0.1);
-      border-top: 1px solid var(--border-color);
-      display: none;
-      font-style: italic;
-      transition: opacity 0.2s;
-      opacity: 0;
-    }
-
-    #typingIndicator.show {
-      opacity: 1;
-    }
-
     .input-area {
       padding: 15px;
       display: flex;
@@ -251,104 +234,6 @@
     ::-webkit-scrollbar-thumb:hover {
       background: #777;
     }
-
-    /* ----------- Responsive Design for Phones ----------- */
-
-    @media (max-width: 600px) {
-      body {
-        font-size: 14px;
-      }
-
-      .chat-header {
-        padding: 14px 16px;
-        font-size: 1.0rem;
-        gap: 8px;
-      }
-
-      .chat-header .avatar {
-        width: 32px;
-        height: 32px;
-        font-size: 1.1rem;
-      }
-
-      #themeToggle {
-        width: 36px;
-        height: 36px;
-        font-size: 1.1rem;
-      }
-
-      .chat-messages {
-        padding: 16px 12px;
-      }
-
-      .message {
-        max-width: 80%;
-        padding: 9px 12px;
-        font-size: 0.95rem;
-      }
-
-      .message strong {
-        font-size: 0.9rem;
-      }
-
-      .message small {
-        font-size: 0.7rem;
-      }
-
-      #typingIndicator {
-        font-size: 0.85rem;
-        padding: 6px 16px;
-      }
-
-      .input-area {
-        padding: 12px;
-      }
-
-      #messageInput {
-        padding: 10px 14px;
-        font-size: 0.95rem;
-      }
-
-      #sendButton {
-        padding: 0 16px;
-        font-size: 0.95rem;
-      }
-
-      .modal-content {
-        width: 90%;
-        padding: 20px;
-      }
-
-      .modal-content h2 {
-        font-size: 1.2rem;
-      }
-
-      .modal-content input {
-        font-size: 0.95rem;
-      }
-
-      .modal-content button {
-        font-size: 0.95rem;
-      }
-    }
-
-    @media (min-width: 601px) and (max-width: 1024px) {
-      .chat-header {
-        font-size: 1.05rem;
-      }
-
-      .message {
-        font-size: 0.95rem;
-      }
-
-      #messageInput {
-        font-size: 0.95rem;
-      }
-
-      .input-area {
-        padding: 14px;
-      }
-    }
   </style>
 </head>
 <body>
@@ -362,7 +247,7 @@
     </div>
   </div>
 
-  <!-- Chat Container -->
+  <!-- Chat Container (hidden until login) -->
   <div id="chatContainer">
     <div class="chat-header">
       <div class="avatar">💬</div>
@@ -372,12 +257,6 @@
 
     <ul id="messages" class="chat-messages"></ul>
 
-    <!-- Typing Indicator -->
-    <div id="typingIndicator">
-      <span id="typingText"></span>
-    </div>
-
-    <!-- Input Area -->
     <div class="input-area">
       <input id="messageInput" type="text" placeholder="Type a message..." />
       <button id="sendButton">Send</button>
@@ -396,12 +275,8 @@
     const sendButton = document.getElementById('sendButton');
     const messagesList = document.getElementById('messages');
     const themeToggle = document.getElementById('themeToggle');
-    const typingIndicator = document.getElementById('typingIndicator');
-    const typingText = document.getElementById('typingText');
 
     let username = null;
-    let isTyping = false;
-    let typingTimer = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -457,12 +332,14 @@
     function addMessageToUI(message, type, sender) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
+
       const time = getCurrentTime();
       li.innerHTML = `
         <strong>${sender}:</strong>
         <div class="message-text">${message}</div>
         <small>${time}</small>
       `;
+      
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
     }
@@ -474,11 +351,6 @@
         addMessageToUI(message, 'sent', 'You');
         socket.emit('chat message', { user: username, message: message });
         messageInput.value = '';
-        // Stop typing
-        if (isTyping) {
-          isTyping = false;
-          socket.emit('stop typing', username);
-        }
       }
     }
 
@@ -487,50 +359,12 @@
       if (e.key === 'Enter') sendMessage();
     });
 
-    // Typing indicator
-    messageInput.addEventListener('input', () => {
-      if (!isTyping) {
-        isTyping = true;
-        socket.emit('typing', username);
-      }
-
-      clearTimeout(typingTimer);
-      typingTimer = setTimeout(() => {
-        isTyping = false;
-        socket.emit('stop typing', username);
-      }, 2000);
-    });
-
     // Receive message
     socket.on('chat message', (data) => {
       addMessageToUI(data.message, 'received', data.user);
     });
 
-    // Show who is typing
-    socket.on('update typing', (users) => {
-      if (users.length === 0) {
-        typingIndicator.style.display = 'none';
-      } else {
-        if (users.length === 1) {
-          typingText.textContent = `${users[0]} is typing...`;
-        } else if (users.length === 2) {
-          typingText.textContent = `${users[0]} and ${users[1]} are typing...`;
-        } else {
-          typingText.textContent = 'Several people are typing...';
-        }
-        typingIndicator.style.display = 'block';
-        setTimeout(() => typingIndicator.classList.add('show'), 10);
-      }
-    });
-
-    // Remove "is typing" smoothly
-    messageInput.addEventListener('blur', () => {
-      if (isTyping) {
-        isTyping = false;
-        socket.emit('stop typing', username);
-      }
-    });
-
+    // Focus input on load
     window.onload = () => {
       if (username) messageInput.focus();
     };
