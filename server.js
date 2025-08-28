@@ -8,21 +8,43 @@ const io = socketIo(server);
 
 app.use(express.static('public'));
 
+// Track connected users
+const users = new Map();
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // 📩 Send text message to others only
-  socket.on('chat message', (data) => {
-    socket.broadcast.emit('chat message', data); // Not back to self
+  // User joins
+  socket.on('user joined', (data) => {
+    const oldUsername = users.get(socket.id);
+    if (oldUsername) {
+      users.delete(oldUsername);
+    }
+    users.set(socket.id, data.username);
+    console.log(`${data.username} joined`);
+
+    // Broadcast to others
+    io.emit('user joined', { username: data.username });
   });
 
-  // 🖼️ Send image to others only
-  socket.on('chat image', (data) => {
-    socket.broadcast.emit('chat image', data); // Not back to self
-  });
-
+  // User disconnects
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+    const username = users.get(socket.id);
+    if (username) {
+      console.log(`${username} left`);
+      users.delete(socket.id);
+      io.emit('user left', username);
+    }
+  });
+
+  // Text message
+  socket.on('chat message', (data) => {
+    socket.broadcast.emit('chat message', data);
+  });
+
+  // Image message
+  socket.on('chat image', (data) => {
+    socket.broadcast.emit('chat image', data);
   });
 });
 
