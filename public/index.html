@@ -214,6 +214,17 @@
       display: inline-block;
     }
 
+    /* Links in messages */
+    .message a {
+      color: #4fc3f7;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .message a:hover {
+      opacity: 0.8;
+    }
+
     /* Image styling */
     .message img {
       max-width: 100%;
@@ -243,6 +254,74 @@
       max-height: 90vh;
       border-radius: 8px;
       object-fit: contain;
+    }
+
+    /* Link Warning Modal */
+    #linkModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      display: none;
+    }
+
+    .link-modal-content {
+      background: var(--bg-secondary);
+      padding: 25px;
+      border-radius: 12px;
+      max-width: 400px;
+      text-align: center;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      color: var(--text-color);
+    }
+
+    .link-modal-content h3 {
+      margin-bottom: 12px;
+    }
+
+    .link-modal-content p {
+      margin-bottom: 16px;
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .link-modal-content .url-preview {
+      word-break: break-all;
+      background: var(--input-bg);
+      padding: 8px;
+      border-radius: 6px;
+      margin: 10px 0;
+      font-size: 0.85rem;
+    }
+
+    .link-modal-buttons {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .link-modal-buttons button {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+
+    .btn-danger {
+      background: #e53935;
+      color: white;
+    }
+
+    .btn-safe {
+      background: #4a6cf7;
+      color: white;
     }
 
     @keyframes fadeIn {
@@ -352,6 +431,20 @@
     <img id="fullscreenImg" src="" alt="Fullscreen Image" />
   </div>
 
+  <!-- Link Warning Modal -->
+  <div id="linkModal">
+    <div class="link-modal-content">
+      <h3>⚠️ Security Warning</h3>
+      <p>You are about to leave the chat. Be careful with unknown links.</p>
+      <div class="url-preview" id="linkPreview"></div>
+      <p>Do you want to continue?</p>
+      <div class="link-modal-buttons">
+        <button id="cancelLink" class="btn-danger">Cancel</button>
+        <button id="openLink" class="btn-safe">Open Link</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -368,9 +461,14 @@
     const themeToggle = document.getElementById('themeToggle');
     const fullscreenView = document.getElementById('fullscreenView');
     const fullscreenImg = document.getElementById('fullscreenImg');
+    const linkModal = document.getElementById('linkModal');
+    const linkPreview = document.getElementById('linkPreview');
+    const openLinkBtn = document.getElementById('openLink');
+    const cancelLinkBtn = document.getElementById('cancelLink');
 
     let username = null;
     let replyTo = null;
+    let pendingLink = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -403,7 +501,6 @@
       if (e.key === 'Enter') joinChat();
     });
 
-    // Show chat UI
     function showChat() {
       usernameModal.style.display = 'none';
       chatContainer.style.display = 'flex';
@@ -420,6 +517,14 @@
     // Format time
     function getCurrentTime() {
       return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Convert URLs to clickable links with warning
+    function makeLinksClickable(text) {
+      const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,;:!)"])/g;
+      return text.replace(urlRegex, (url) => {
+        return `<a href="#" data-url="${url}" class="chat-link">${url}</a>`;
+      });
     }
 
     // Add message to UI
@@ -443,26 +548,39 @@
         `;
       }
 
+      let messageHTML;
       if (isImage) {
-        li.innerHTML = `
+        messageHTML = `
           <strong>${sender}:</strong>
           ${replyHTML}
           <img src="${content}" alt="Shared image" />
           <small>${time}</small>
         `;
       } else {
-        li.innerHTML = `
+        const safeContent = makeLinksClickable(content);
+        messageHTML = `
           <strong>${sender}:</strong>
           ${replyHTML}
-          <div class="message-text">${content}</div>
+          <div class="message-text">${safeContent}</div>
           <small>${time}</small>
         `;
       }
 
-      // Long-press to reply
+      li.innerHTML = messageHTML;
+
+      // Make message clickable for reply
       li.addEventListener('contextmenu', (e) => {
         e.preventDefault();
         setReply(sender, content, isImage);
+      });
+
+      // Make links clickable
+      li.querySelectorAll('.chat-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+          e.preventDefault();
+          const url = e.target.dataset.url;
+          openLinkSafely(url);
+        });
       });
 
       messagesList.appendChild(li);
@@ -494,6 +612,26 @@
     // Fullscreen image close
     fullscreenView.addEventListener('click', () => {
       fullscreenView.style.display = 'none';
+    });
+
+    // Safe link warning
+    function openLinkSafely(url) {
+      pendingLink = url;
+      linkPreview.textContent = url;
+      linkModal.style.display = 'flex';
+    }
+
+    openLinkBtn.addEventListener('click', () => {
+      if (pendingLink) {
+        window.open(pendingLink, '_blank');
+        pendingLink = null;
+      }
+      linkModal.style.display = 'none';
+    });
+
+    cancelLinkBtn.addEventListener('click', () => {
+      pendingLink = null;
+      linkModal.style.display = 'none';
     });
 
     // Send message
