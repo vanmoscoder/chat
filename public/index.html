@@ -135,31 +135,8 @@
       box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
     }
 
-    #callButton {
-      margin-left: 10px;
-      background: #27ae60;
-      color: white;
-      border: none;
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 1.2rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    #callButton:hover {
-      background: #219653;
-    }
-
-    #endCallButton {
-      background: #e74c3c;
-    }
-
-    #endCallButton:hover {
-      background: #c0392b;
+    #themeToggle:hover {
+      transform: scale(1.05);
     }
 
     .chat-messages {
@@ -237,6 +214,17 @@
       display: inline-block;
     }
 
+    /* Links in messages */
+    .message a {
+      color: #4fc3f7;
+      text-decoration: underline;
+      word-break: break-all;
+    }
+
+    .message a:hover {
+      opacity: 0.8;
+    }
+
     /* Image styling */
     .message img {
       max-width: 100%;
@@ -303,7 +291,7 @@
       opacity: 0.9;
     }
 
-    .url-preview {
+    .link-modal-content .url-preview {
       word-break: break-all;
       background: var(--input-bg);
       padding: 8px;
@@ -398,7 +386,7 @@
     @media (max-width: 600px) {
       .chat-header { padding: 14px 16px; font-size: 1.0rem; }
       .chat-header .avatar { width: 32px; height: 32px; }
-      #themeToggle, #callButton, #attachButton { width: 36px; height: 36px; }
+      #themeToggle, #attachButton { width: 36px; height: 36px; }
       .chat-messages { padding: 16px 12px; }
       .message { max-width: 80%; padding: 9px 12px; }
       .message strong { font-size: 0.9rem; }
@@ -426,7 +414,6 @@
       <div class="avatar">💬</div>
       <span>General Chat</span>
       <button id="themeToggle" title="Switch theme">🌙</button>
-      <button id="callButton" title="Start Call">📞</button>
     </div>
 
     <ul id="messages" class="chat-messages"></ul>
@@ -478,17 +465,10 @@
     const linkPreview = document.getElementById('linkPreview');
     const openLinkBtn = document.getElementById('openLink');
     const cancelLinkBtn = document.getElementById('cancelLink');
-    const callButton = document.getElementById('callButton');
 
     let username = null;
     let replyTo = null;
     let pendingLink = null;
-    let localStream = null;
-    let remoteStream = null;
-    let peerConnection = null;
-    let isCalling = false;
-
-    const configuration = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -652,108 +632,6 @@
     cancelLinkBtn.addEventListener('click', () => {
       pendingLink = null;
       linkModal.style.display = 'none';
-    });
-
-    // === CALLING SYSTEM ===
-    async function startCall() {
-      if (isCalling) return;
-      isCalling = true;
-      callButton.textContent = '🔴';
-      callButton.id = 'endCallButton';
-      callButton.title = 'End Call';
-
-      try {
-        localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        createPeerConnection();
-        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-        const offer = await peerConnection.createOffer();
-        await peerConnection.setLocalDescription(offer);
-        socket.emit('call:offer', { sdp: offer });
-      } catch (err) {
-        alert('Error accessing microphone: ' + err.message);
-        endCall();
-      }
-    }
-
-    function endCall() {
-      isCalling = false;
-      callButton.textContent = '📞';
-      callButton.id = 'callButton';
-      callButton.title = 'Start Call';
-
-      if (peerConnection) {
-        peerConnection.close();
-        peerConnection = null;
-      }
-      if (localStream) {
-        localStream.getTracks().forEach(t => t.stop());
-        localStream = null;
-      }
-      if (remoteStream) {
-        remoteStream.getTracks().forEach(t => t.stop());
-        remoteStream = null;
-      }
-
-      socket.emit('call:hangup');
-    }
-
-    function createPeerConnection() {
-      peerConnection = new RTCPeerConnection(configuration);
-
-      peerConnection.onicecandidate = (event) => {
-        if (event.candidate) {
-          socket.emit('call:ice-candidate', { candidate: event.candidate });
-        }
-      };
-
-      peerConnection.ontrack = (event) => {
-        remoteStream = event.streams[0];
-      };
-
-      peerConnection.onconnectionstatechange = () => {
-        if (peerConnection.connectionState === 'failed') {
-          endCall();
-        }
-      };
-    }
-
-    // Call button
-    callButton.addEventListener('click', () => {
-      if (isCalling) {
-        endCall();
-      } else {
-        startCall();
-      }
-    });
-
-    // Socket call events
-    socket.on('call:offer', async (data) => {
-      if (isCalling) return;
-      if (!confirm(`${data.from} wants to start a call. Answer?`)) {
-        socket.emit('call:hangup');
-        return;
-      }
-
-      startCall();
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-      const answer = await peerConnection.createAnswer();
-      await peerConnection.setLocalDescription(answer);
-      socket.emit('call:answer', { sdp: answer });
-    });
-
-    socket.on('call:answer', async (data) => {
-      if (!peerConnection) return;
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(data.sdp));
-    });
-
-    socket.on('call:ice-candidate', (data) => {
-      if (!peerConnection) return;
-      peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
-    });
-
-    socket.on('call:hangup', () => {
-      endCall();
     });
 
     // Send message
