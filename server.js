@@ -8,21 +8,39 @@ const io = socketIo(server);
 
 app.use(express.static('public'));
 
+// Handle connections
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Send text message to others only
+  // --- Chat Messages ---
   socket.on('chat message', (data) => {
-    socket.broadcast.emit('chat message', data); // Not back to self
+    socket.broadcast.emit('chat message', data);
   });
 
-  // Send image to others only
   socket.on('chat image', (data) => {
-    socket.broadcast.emit('chat image', data); // Not back to self
+    socket.broadcast.emit('chat image', data);
+  });
+
+  // --- WebRTC Signaling for Calls ---
+  socket.on('call:offer', (data) => {
+    socket.broadcast.emit('call:offer', { ...data, from: socket.id });
+  });
+
+  socket.on('call:answer', (data) => {
+    socket.broadcast.emit('call:answer', data);
+  });
+
+  socket.on('call:ice-candidate', (data) => {
+    socket.broadcast.emit('call:ice-candidate', data);
+  });
+
+  socket.on('call:hangup', () => {
+    socket.broadcast.emit('call:hangup');
   });
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
+    socket.broadcast.emit('call:hangup'); // Notify if user leaves mid-call
   });
 });
 
