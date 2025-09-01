@@ -8,20 +8,45 @@ const io = socketIo(server);
 
 app.use(express.static('public'));
 
+const users = {}; // Track connected users
+
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Send text message to others only
+  // Register user
+  socket.on('register', (username) => {
+    users[socket.id] = username;
+    socket.broadcast.emit('users', Object.values(users));
+  });
+
+  // Public message
   socket.on('chat message', (data) => {
-    socket.broadcast.emit('chat message', data); // Not back to self
+    socket.broadcast.emit('chat message', data);
   });
 
-  // Send image to others only
   socket.on('chat image', (data) => {
-    socket.broadcast.emit('chat image', data); // Not back to self
+    socket.broadcast.emit('chat image', data);
   });
 
+  // Private message
+  socket.on('private message', (data) => {
+    const recipientId = Object.keys(users).find(id => users[id] === data.to);
+    if (recipientId) {
+      io.to(recipientId).emit('private message', data);
+    }
+  });
+
+  socket.on('private image', (data) => {
+    const recipientId = Object.keys(users).find(id => users[id] === data.to);
+    if (recipientId) {
+      io.to(recipientId).emit('private image', data);
+    }
+  });
+
+  // Disconnect
   socket.on('disconnect', () => {
+    delete users[socket.id];
+    io.emit('users', Object.values(users));
     console.log('User disconnected:', socket.id);
   });
 });
