@@ -288,7 +288,7 @@
       opacity: 0.4;
     }
 
-    .video-message play-icon {
+    .video-message .play-icon {
       position: absolute;
       top: 50%;
       left: 50%;
@@ -502,6 +502,19 @@
       flex-shrink: 0;
     }
 
+    /* Recording Indicator */
+    #recordingIndicator {
+      position: fixed;
+      bottom: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      color: red;
+      font-size: 1.2rem;
+      font-weight: bold;
+      z-index: 10000;
+      display: none;
+    }
+
     /* iPhone Specific */
     @media (max-width: 430px) {
       .chat-header {
@@ -602,6 +615,9 @@
     </div>
   </div>
 
+  <!-- Recording Indicator -->
+  <div id="recordingIndicator">Recording...</div>
+
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -623,11 +639,13 @@
     const openLinkBtn = document.getElementById('openLink');
     const cancelLinkBtn = document.getElementById('cancelLink');
     const cameraButton = document.getElementById('cameraButton');
+    const recordingIndicator = document.getElementById('recordingIndicator');
 
     let username = null;
     let replyTo = null;
     let pendingLink = null;
     let stream = null;
+    let recorder = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -896,7 +914,7 @@
           document.body.appendChild(video);
 
           // Start recording
-          const recorder = new MediaRecorder(stream);
+          recorder = new MediaRecorder(stream);
           const chunks = [];
 
           recorder.ondataavailable = (e) => {
@@ -913,25 +931,23 @@
             video.remove();
             stream.getTracks().forEach(track => track.stop());
             stream = null;
+            recordingIndicator.style.display = 'none';
           };
 
           // Show recording indicator
-          const recordingIndicator = document.createElement('div');
-          recordingIndicator.style.position = 'fixed';
-          recordingIndicator.style.bottom = '20px';
-          recordingIndicator.style.left = '50%';
-          recordingIndicator.style.transform = 'translateX(-50%)';
+          recordingIndicator.style.display = 'block';
           recordingIndicator.style.color = 'red';
-          recordingIndicator.style.fontSize = '1.5rem';
+          recordingIndicator.style.fontSize = '1.2rem';
           recordingIndicator.style.fontWeight = 'bold';
-          recordingIndicator.style.zIndex = '10000';
-          recordingIndicator.innerText = 'Recording...';
-          document.body.appendChild(recordingIndicator);
+
+          // Play recording sound
+          const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-digital-camera-click-1112.mp3');
+          audio.volume = 0.5;
+          audio.play();
 
           // Stop after 10 seconds
           setTimeout(() => {
             recorder.stop();
-            recordingIndicator.remove();
           }, 10000);
 
           // Start recording
