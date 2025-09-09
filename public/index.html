@@ -2,7 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Chat App</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
@@ -19,12 +21,12 @@
     }
 
     .light-mode {
-      --bg-primary: #f4f6f8;
+      --bg-primary: #f9f9f9;
       --bg-secondary: #ffffff;
-      --border-color: #dcdcdc;
+      --border-color: #e0e0e0;
       --text-color: #2c3e50;
-      --received-bg: #ecf0f1;
-      --input-bg: #f0f0f0;
+      --received-bg: #f0f0f0;
+      --input-bg: #f5f5f5;
       --reply-color: #e67e22;
     }
 
@@ -32,17 +34,30 @@
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
       transition: var(--transition);
     }
 
     body {
       background: var(--bg-primary);
       color: var(--text-color);
-      font-family: 'Inter', sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
       height: 100vh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    /* Safe area for iPhone Notch */
+    @supports (padding: max(0px)) {
+      body {
+        padding-top: env(safe-area-inset-top);
+        padding-bottom: env(safe-area-inset-bottom);
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+      }
     }
 
     /* Username Modal */
@@ -52,11 +67,12 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.7);
+      background: rgba(0, 0, 0, 0.8);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 1000;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
     .modal-content {
@@ -64,7 +80,7 @@
       max-width: 400px;
       background: var(--bg-secondary);
       padding: 30px;
-      border-radius: 16px;
+      border-radius: 18px;
       text-align: center;
       box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     }
@@ -72,32 +88,38 @@
     .modal-content h2 {
       margin-bottom: 16px;
       color: var(--text-color);
+      font-size: 1.3rem;
+      font-weight: 600;
     }
 
     .modal-content input {
       width: 100%;
-      padding: 12px 16px;
-      margin: 12px 0;
+      padding: 16px;
+      margin: 16px 0;
       border: 1px solid var(--border-color);
-      border-radius: 8px;
+      border-radius: 12px;
       outline: none;
       background: var(--input-bg);
       color: var(--text-color);
+      font-size: 1rem;
+      font-family: inherit;
     }
 
     .modal-content button {
-      margin-top: 10px;
-      padding: 10px 20px;
+      margin-top: 16px;
+      padding: 14px 24px;
       background: #4a6cf7;
       color: white;
       border: none;
-      border-radius: 8px;
+      border-radius: 12px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 1.05rem;
+      letter-spacing: 0.5px;
     }
 
     .modal-content button:hover {
-      background: #3a5be5;
+      opacity: 0.9;
     }
 
     /* Chat UI */
@@ -108,7 +130,7 @@
     }
 
     .chat-header {
-      padding: 18px 20px;
+      padding: 16px 20px;
       background: var(--bg-secondary);
       border-bottom: 1px solid var(--border-color);
       font-size: 1.1rem;
@@ -116,7 +138,10 @@
       color: var(--text-color);
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
     }
 
     #themeToggle {
@@ -124,15 +149,15 @@
       background: var(--input-bg);
       color: var(--text-color);
       border: none;
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     #themeToggle:hover {
@@ -141,17 +166,18 @@
 
     .chat-messages {
       flex: 1;
-      padding: 20px;
+      padding: 16px 12px;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
+      -webkit-overflow-scrolling: touch;
     }
 
     .message {
-      max-width: 70%;
-      padding: 10px 14px;
-      border-radius: 18px;
+      max-width: 80%;
+      padding: 14px 18px;
+      border-radius: 20px;
       line-height: 1.5;
       word-wrap: break-word;
       animation: fadeIn 0.3s ease-out;
@@ -173,17 +199,17 @@
     /* Reply indicator */
     .reply-to {
       display: flex;
-      background: rgba(0, 0, 0, 0.1);
-      border-left: 3px solid var(--reply-color);
-      padding: 6px 10px;
-      margin-bottom: 8px;
-      border-radius: 6px;
-      font-size: 0.85rem;
-      cursor: pointer;
+      background: rgba(0, 0, 0, 0.08);
+      border-left: 4px solid var(--reply-color);
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
     }
 
     .reply-to strong {
-      font-size: 0.9rem;
+      font-size: 0.95rem;
+      display: block;
     }
 
     .reply-to .message-text {
@@ -192,46 +218,45 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: 200px;
+      max-width: 220px;
     }
 
     .reply-to img {
-      max-width: 40px;
-      border-radius: 6px;
-      margin-top: 2px;
+      max-width: 44px;
+      border-radius: 8px;
+      margin-top: 4px;
     }
 
     .message strong {
       display: block;
-      font-size: 0.95rem;
-      margin-bottom: 4px;
+      font-size: 1rem;
+      margin-bottom: 6px;
+      font-weight: 600;
     }
 
     .message small {
       font-size: 0.75rem;
-      opacity: 0.8;
-      margin-top: 4px;
+      opacity: 0.75;
+      margin-top: 6px;
       display: inline-block;
     }
 
     /* Links in messages */
     .message a {
-      color: #4fc3f7;
+      color: #4a90e2;
       text-decoration: underline;
       word-break: break-all;
-    }
-
-    .message a:hover {
-      opacity: 0.8;
+      font-weight: 500;
     }
 
     /* Image styling */
     .message img {
       max-width: 100%;
-      border-radius: 12px;
-      margin-top: 8px;
+      border-radius: 16px;
+      margin-top: 10px;
       cursor: pointer;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     /* Fullscreen image viewer */
@@ -250,9 +275,9 @@
     }
 
     .fullscreen img {
-      max-width: 90vw;
-      max-height: 90vh;
-      border-radius: 8px;
+      max-width: 95vw;
+      max-height: 95vh;
+      border-radius: 12px;
       object-fit: contain;
     }
 
@@ -263,55 +288,60 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.85);
       display: flex;
       justify-content: center;
       align-items: center;
       z-index: 3000;
       display: none;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
     .link-modal-content {
       background: var(--bg-secondary);
-      padding: 25px;
-      border-radius: 12px;
-      max-width: 400px;
+      padding: 28px;
+      border-radius: 16px;
+      max-width: 90%;
       text-align: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
       color: var(--text-color);
     }
 
     .link-modal-content h3 {
-      margin-bottom: 12px;
+      margin-bottom: 14px;
+      font-size: 1.2rem;
     }
 
     .link-modal-content p {
-      margin-bottom: 16px;
-      font-size: 0.9rem;
+      margin-bottom: 18px;
+      font-size: 0.95rem;
       opacity: 0.9;
     }
 
     .link-modal-content .url-preview {
       word-break: break-all;
       background: var(--input-bg);
-      padding: 8px;
-      border-radius: 6px;
-      margin: 10px 0;
-      font-size: 0.85rem;
+      padding: 12px;
+      border-radius: 10px;
+      margin: 12px 0;
+      font-size: 0.9rem;
+      font-family: monospace;
     }
 
     .link-modal-buttons {
       display: flex;
       justify-content: center;
-      gap: 10px;
+      gap: 14px;
+      margin-top: 10px;
     }
 
     .link-modal-buttons button {
-      padding: 8px 16px;
+      padding: 12px 24px;
       border: none;
-      border-radius: 6px;
+      border-radius: 10px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 1rem;
     }
 
     .btn-danger {
@@ -330,36 +360,42 @@
     }
 
     .input-area {
-      padding: 15px;
+      padding: 12px;
       display: flex;
       border-top: 1px solid var(--border-color);
       background: var(--bg-secondary);
+      position: sticky;
+      bottom: 0;
+      z-index: 100;
     }
 
     #messageInput {
       flex: 1;
-      padding: 12px 16px;
+      padding: 14px 18px;
       border: none;
-      border-radius: 24px;
+      border-radius: 28px;
       outline: none;
       background: var(--input-bg);
       color: var(--text-color);
-      font-size: 0.95rem;
+      font-size: 1rem;
+      font-family: inherit;
+      margin-right: 8px;
     }
 
     #attachButton {
-      margin-right: 10px;
+      margin-right: 8px;
       background: var(--input-bg);
       color: var(--text-color);
       border: none;
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 1.2rem;
+      font-size: 1.3rem;
       display: flex;
       align-items: center;
       justify-content: center;
+      flex-shrink: 0;
     }
 
     #fileInput {
@@ -367,33 +403,70 @@
     }
 
     #sendButton {
-      margin-left: 10px;
-      padding: 0 20px;
+      padding: 0 24px;
       background: var(--sent-bg);
       color: white;
       border: none;
-      border-radius: 24px;
+      border-radius: 28px;
       cursor: pointer;
-      font-weight: 500;
+      font-weight: 600;
+      font-size: 1rem;
+      flex-shrink: 0;
     }
 
     #sendButton:hover,
     #attachButton:hover {
-      opacity: 0.95;
+      opacity: 0.9;
     }
 
-    /* Responsive for Phones */
-    @media (max-width: 600px) {
-      .chat-header { padding: 14px 16px; font-size: 1.0rem; }
-      .chat-header .avatar { width: 32px; height: 32px; }
-      #themeToggle, #attachButton { width: 36px; height: 36px; }
-      .chat-messages { padding: 16px 12px; }
-      .message { max-width: 80%; padding: 9px 12px; }
-      .message strong { font-size: 0.9rem; }
-      .message small { font-size: 0.7rem; }
-      .input-area { padding: 12px; }
-      #messageInput { padding: 10px 14px; }
-      #sendButton, #attachButton { font-size: 0.95rem; }
+    /* iPhone Specific */
+    @media (max-width: 430px) {
+      .chat-header {
+        padding: 14px 16px;
+        font-size: 1.05rem;
+      }
+
+      .message {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+      }
+
+      .message strong {
+        font-size: 0.95rem;
+      }
+
+      .message small {
+        font-size: 0.7rem;
+      }
+
+      .input-area {
+        padding: 10px;
+      }
+
+      #messageInput {
+        padding: 12px 16px;
+        font-size: 0.95rem;
+      }
+
+      #attachButton, #sendButton {
+        font-size: 0.95rem;
+        width: 44px;
+        height: 44px;
+      }
+
+      .modal-content {
+        padding: 24px;
+      }
+
+      .modal-content input {
+        padding: 14px;
+        font-size: 0.95rem;
+      }
+
+      .modal-content button {
+        padding: 12px 20px;
+        font-size: 1rem;
+      }
     }
   </style>
 </head>
@@ -648,6 +721,13 @@
     sendButton.addEventListener('click', sendMessage);
     messageInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') sendMessage();
+    });
+
+    // Scroll to bottom when input focused (iPhone fix)
+    messageInput.addEventListener('focus', () => {
+      setTimeout(() => {
+        messagesList.scrollTop = messagesList.scrollHeight;
+      }, 300);
     });
 
     // Attach image
