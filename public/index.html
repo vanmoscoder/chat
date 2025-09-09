@@ -249,72 +249,6 @@
       font-weight: 500;
     }
 
-    /* Video message */
-    .video-message {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1;
-      border-radius: 50%;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      cursor: pointer;
-    }
-
-    .video-message video {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 50%;
-    }
-
-    .video-message::before {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 50%;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .video-message:hover::before {
-      opacity: 0.4;
-    }
-
-    .video-message.playing::before {
-      opacity: 0.4;
-    }
-
-    .video-message .play-icon {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      width: 32px;
-      height: 32px;
-      background: rgba(255, 255, 255, 0.8);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-
-    .video-message:hover .play-icon,
-    .video-message.playing .play-icon {
-      opacity: 1;
-    }
-
-    .video-message .play-icon svg {
-      width: 16px;
-      height: 16px;
-      fill: black;
-    }
-
     /* Image styling */
     .message img {
       max-width: 100%;
@@ -485,36 +419,6 @@
       opacity: 0.9;
     }
 
-    /* Camera Button */
-    #cameraButton {
-      margin-right: 8px;
-      background: var(--input-bg);
-      color: var(--text-color);
-      border: none;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 1.3rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    /* Recording Indicator */
-    #recordingIndicator {
-      position: fixed;
-      bottom: 80px;
-      left: 50%;
-      transform: translateX(-50%);
-      color: red;
-      font-size: 1.2rem;
-      font-weight: bold;
-      z-index: 10000;
-      display: none;
-    }
-
     /* iPhone Specific */
     @media (max-width: 430px) {
       .chat-header {
@@ -544,7 +448,7 @@
         font-size: 0.95rem;
       }
 
-      #attachButton, #sendButton, #cameraButton {
+      #attachButton, #sendButton {
         font-size: 0.95rem;
         width: 44px;
         height: 44px;
@@ -590,7 +494,6 @@
     <div class="input-area">
       <input type="file" id="fileInput" accept="image/*" />
       <button id="attachButton" title="Attach image">📎</button>
-      <button id="cameraButton" title="Record video">📹</button>
       <input id="messageInput" type="text" placeholder="Type a message..." />
       <button id="sendButton">Send</button>
     </div>
@@ -615,9 +518,6 @@
     </div>
   </div>
 
-  <!-- Recording Indicator -->
-  <div id="recordingIndicator">Recording...</div>
-
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -638,14 +538,10 @@
     const linkPreview = document.getElementById('linkPreview');
     const openLinkBtn = document.getElementById('openLink');
     const cancelLinkBtn = document.getElementById('cancelLink');
-    const cameraButton = document.getElementById('cameraButton');
-    const recordingIndicator = document.getElementById('recordingIndicator');
 
     let username = null;
     let replyTo = null;
     let pendingLink = null;
-    let stream = null;
-    let recorder = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -733,24 +629,6 @@
           <img src="${content}" alt="Shared image" />
           <small>${time}</small>
         `;
-      } else if (content instanceof Blob) {
-        // Handle video blob
-        const url = URL.createObjectURL(content);
-        messageHTML = `
-          <strong>${sender}:</strong>
-          ${replyHTML}
-          <div class="video-message" data-src="${url}">
-            <video preload="metadata" autoplay loop muted>
-              <source src="${url}" type="video/mp4">
-            </video>
-            <div class="play-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-            </div>
-          </div>
-          <small>${time}</small>
-        `;
       } else {
         const safeContent = makeLinksClickable(content);
         messageHTML = `
@@ -777,21 +655,6 @@
           openLinkSafely(url);
         });
       });
-
-      // Play video on click
-      const videoMsg = li.querySelector('.video-message');
-      if (videoMsg) {
-        videoMsg.addEventListener('click', () => {
-          const video = videoMsg.querySelector('video');
-          if (video.paused) {
-            video.play();
-            videoMsg.classList.add('playing');
-          } else {
-            video.pause();
-            videoMsg.classList.remove('playing');
-          }
-        });
-      }
 
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
@@ -887,78 +750,6 @@
       }
     });
 
-    // Camera Button
-    cameraButton.addEventListener('click', () => {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('Camera not supported');
-        return;
-      }
-
-      navigator.mediaDevices.getUserMedia({ video: true })
-        .then((mediaStream) => {
-          stream = mediaStream;
-          const video = document.createElement('video');
-          video.srcObject = stream;
-          video.autoplay = true;
-          video.muted = true;
-          video.width = 200;
-          video.height = 200;
-          video.style.borderRadius = '50%';
-          video.style.position = 'fixed';
-          video.style.top = '50%';
-          video.style.left = '50%';
-          video.style.transform = 'translate(-50%, -50%)';
-          video.style.zIndex = '9999';
-          video.style.backgroundColor = 'rgba(0,0,0,0.5)';
-          video.style.boxShadow = '0 0 10px rgba(0,0,0,0.5)';
-          document.body.appendChild(video);
-
-          // Start recording
-          recorder = new MediaRecorder(stream);
-          const chunks = [];
-
-          recorder.ondataavailable = (e) => {
-            if (e.data.size > 0) {
-              chunks.push(e.data);
-            }
-          };
-
-          recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: 'video/mp4' });
-            addMessageToUI(blob, 'sent', 'You', false, replyTo);
-            socket.emit('chat video', { user: username, video: blob, reply: replyTo });
-            clearReply();
-            video.remove();
-            stream.getTracks().forEach(track => track.stop());
-            stream = null;
-            recordingIndicator.style.display = 'none';
-          };
-
-          // Show recording indicator
-          recordingIndicator.style.display = 'block';
-          recordingIndicator.style.color = 'red';
-          recordingIndicator.style.fontSize = '1.2rem';
-          recordingIndicator.style.fontWeight = 'bold';
-
-          // Play recording sound
-          const audio = new Audio('https://assets.mixkit.co/sfx/preview/mixkit-digital-camera-click-1112.mp3');
-          audio.volume = 0.5;
-          audio.play();
-
-          // Stop after 10 seconds
-          setTimeout(() => {
-            recorder.stop();
-          }, 10000);
-
-          // Start recording
-          recorder.start();
-        })
-        .catch(err => {
-          console.error("Error accessing camera:", err);
-          alert("Camera access denied or not available");
-        });
-    });
-
     // Receive text message
     socket.on('chat message', (data) => {
       addMessageToUI(data.message, 'received', data.user, false, data.reply || null);
@@ -967,11 +758,6 @@
     // Receive image
     socket.on('chat image', (data) => {
       addMessageToUI(data.image, 'received', data.user, true, data.reply || null);
-    });
-
-    // Receive video
-    socket.on('chat video', (data) => {
-      addMessageToUI(data.video, 'received', data.user, false, data.reply || null);
     });
 
     // Focus input
