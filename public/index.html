@@ -354,6 +354,88 @@
       color: white;
     }
 
+    /* Image Preview Modal */
+    #imagePreviewModal {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      z-index: 2000;
+      display: none;
+      backdrop-filter: blur(8px);
+      border-radius: 16px 16px 0 0;
+    }
+
+    .image-preview-container {
+      background: var(--bg-secondary);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .image-preview-header {
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .image-preview-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--text-color);
+    }
+
+    .close-image-btn {
+      background: transparent;
+      color: var(--text-color);
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+    }
+
+    .image-preview-img {
+      width: 100%;
+      max-height: 250px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .image-preview-footer {
+      padding: 12px 16px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .image-caption-input {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      outline: none;
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-size: 0.95rem;
+      placeholder: var(--text-color);
+    }
+
+    .send-image-btn {
+      padding: 10px 20px;
+      background: var(--sent-bg);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -522,6 +604,23 @@
     </div>
   </div>
 
+  <!-- Image Preview Modal -->
+  <div id="imagePreviewModal">
+    <div class="image-preview-container">
+      <div class="image-preview-header">
+        <h3>Send Photo</h3>
+        <button class="close-image-btn">×</button>
+      </div>
+      <div class="image-preview-body">
+        <img id="previewImage" class="image-preview-img" src="" alt="Selected image" />
+      </div>
+      <div class="image-preview-footer">
+        <input type="text" id="imageCaption" class="image-caption-input" placeholder="Add a caption..." />
+        <button id="sendImageBtn" class="send-image-btn">SEND</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -542,6 +641,11 @@
     const linkPreview = document.getElementById('linkPreview');
     const openLinkBtn = document.getElementById('openLink');
     const cancelLinkBtn = document.getElementById('cancelLink');
+    const imagePreviewModal = document.getElementById('imagePreviewModal');
+    const previewImage = document.getElementById('previewImage');
+    const imageCaption = document.getElementById('imageCaption');
+    const sendImageBtn = document.getElementById('sendImageBtn');
+    const closeImageBtn = document.querySelector('.close-image-btn');
 
     let username = null;
     let replyTo = null;
@@ -745,13 +849,34 @@
         const reader = new FileReader();
         reader.onload = function(event) {
           const imageData = event.target.result;
-          addMessageToUI(imageData, 'sent', 'You', true, replyTo);
-          socket.emit('chat image', { user: username, image: imageData, reply: replyTo });
-          fileInput.value = '';
-          clearReply();
+          previewImage.src = imageData;
+          imagePreviewModal.style.display = 'block';
+          imageCaption.value = '';
         };
         reader.readAsDataURL(file);
       }
+    });
+
+    // Close image preview
+    closeImageBtn.addEventListener('click', () => {
+      imagePreviewModal.style.display = 'none';
+    });
+
+    // Send image with caption
+    sendImageBtn.addEventListener('click', () => {
+      const caption = imageCaption.value.trim();
+      const imageUrl = previewImage.src;
+
+      addMessageToUI(imageUrl, 'sent', 'You', true, replyTo);
+      socket.emit('chat image', { 
+        user: username, 
+        image: imageUrl, 
+        reply: replyTo,
+        caption: caption 
+      });
+
+      imagePreviewModal.style.display = 'none';
+      imageCaption.value = '';
     });
 
     // Receive text message
