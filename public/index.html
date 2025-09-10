@@ -403,19 +403,23 @@
     }
 
     #sendButton {
-      padding: 0 24px;
+      padding: 0 16px;
       background: var(--sent-bg);
       color: white;
       border: none;
-      border-radius: 28px;
+      border-radius: 50%;
       cursor: pointer;
       font-weight: 600;
-      font-size: 1rem;
+      font-size: 1.4rem;
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
     }
 
-    #sendButton:hover,
-    #attachButton:hover {
+    #sendButton:hover {
       opacity: 0.9;
     }
 
@@ -449,7 +453,7 @@
       }
 
       #attachButton, #sendButton {
-        font-size: 0.95rem;
+        font-size: 1.3rem;
         width: 44px;
         height: 44px;
       }
@@ -495,7 +499,7 @@
       <input type="file" id="fileInput" accept="image/*" />
       <button id="attachButton" title="Attach image">📎</button>
       <input id="messageInput" type="text" placeholder="Type a message..." />
-      <button id="sendButton">Send</button>
+      <button id="sendButton" title="Send message">➤</button>
     </div>
   </div>
 
