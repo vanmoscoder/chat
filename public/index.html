@@ -196,35 +196,22 @@
       align-self: flex-end;
     }
 
-    /* Reply indicator */
-    .reply-to {
+    /* Reply indicator (we'll reuse for caption) */
+    .caption-box {
       display: flex;
       background: rgba(0, 0, 0, 0.08);
       border-left: 4px solid var(--reply-color);
       padding: 8px 12px;
-      margin-bottom: 10px;
+      margin-top: 8px;
       border-radius: 8px;
       font-size: 0.9rem;
     }
 
-    .reply-to strong {
-      font-size: 0.95rem;
-      display: block;
-    }
-
-    .reply-to .message-text {
+    .caption-box .caption-text {
       font-size: 0.9rem;
       opacity: 0.9;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 220px;
-    }
-
-    .reply-to img {
-      max-width: 44px;
-      border-radius: 8px;
-      margin-top: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
     .message strong {
@@ -422,7 +409,6 @@
       background: var(--input-bg);
       color: var(--text-color);
       font-size: 0.95rem;
-      placeholder: var(--text-color);
     }
 
     .send-image-btn {
@@ -708,8 +694,8 @@
       });
     }
 
-    // Add message to UI
-    function addMessageToUI(content, type, sender, isImage = false, reply = null) {
+    // Add message or image to UI
+    function addMessageToUI(content, type, sender, isImage = false, reply = null, caption = null) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
       li.dataset.messageId = Date.now();
@@ -731,10 +717,19 @@
 
       let messageHTML;
       if (isImage) {
+        let captionHTML = '';
+        if (caption && caption.trim()) {
+          captionHTML = `
+            <div class="caption-box">
+              <span class="caption-text">${caption}</span>
+            </div>
+          `;
+        }
         messageHTML = `
           <strong>${sender}:</strong>
           ${replyHTML}
           <img src="${content}" alt="Shared image" />
+          ${captionHTML}
           <small>${time}</small>
         `;
       } else {
@@ -867,7 +862,7 @@
       const caption = imageCaption.value.trim();
       const imageUrl = previewImage.src;
 
-      addMessageToUI(imageUrl, 'sent', 'You', true, replyTo);
+      addMessageToUI(imageUrl, 'sent', 'You', true, replyTo, caption);
       socket.emit('chat image', { 
         user: username, 
         image: imageUrl, 
@@ -886,7 +881,7 @@
 
     // Receive image
     socket.on('chat image', (data) => {
-      addMessageToUI(data.image, 'received', data.user, true, data.reply || null);
+      addMessageToUI(data.image, 'received', data.user, true, data.reply || null, data.caption || null);
     });
 
     // Focus input
