@@ -494,6 +494,63 @@
       100% { transform: scale(1); }
     }
 
+    /* Voice Recording Overlay */
+    #recordingOverlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.9);
+      padding: 16px;
+      border-top: 1px solid var(--border-color);
+      display: none;
+      z-index: 1000;
+      border-radius: 16px 16px 0 0;
+    }
+
+    .recording-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .recording-waveform {
+      display: flex;
+      gap: 2px;
+      height: 24px;
+      align-items: center;
+      flex-grow: 1;
+    }
+
+    .recording-waveform span {
+      width: 3px;
+      height: 100%;
+      background: white;
+      border-radius: 2px;
+      opacity: 0.7;
+    }
+
+    .recording-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .recording-btn {
+      padding: 8px 16px;
+      background: var(--sent-bg);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .cancel-btn {
+      background: var(--received-bg);
+      color: white;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -638,7 +695,7 @@
     <div class="input-area">
       <input type="file" id="fileInput" accept="image/*" />
       <button id="attachButton" title="Attach image">📎</button>
-      <button id="voiceButton" title="Hold to record voice">🎤</button>
+      <button id="voiceButton" title="Record voice">🎤</button>
       <input id="messageInput" type="text" placeholder="Type a message..." />
       <button id="sendButton" title="Send message">➤</button>
     </div>
@@ -680,6 +737,19 @@
     </div>
   </div>
 
+  <!-- Voice Recording Overlay -->
+  <div id="recordingOverlay">
+    <div class="recording-controls">
+      <div class="recording-waveform">
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <div class="recording-actions">
+        <button class="recording-btn cancel-btn">Cancel</button>
+        <button class="recording-btn">Send</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -706,6 +776,9 @@
     const sendImageBtn = document.getElementById('sendImageBtn');
     const closeImageBtn = document.querySelector('.close-image-btn');
     const voiceButton = document.getElementById('voiceButton');
+    const recordingOverlay = document.getElementById('recordingOverlay');
+    const cancelRecordingBtn = document.querySelector('.cancel-btn');
+    const sendRecordingBtn = document.querySelector('.recording-btn:not(.cancel-btn)');
 
     let username = null;
     let replyTo = null;
@@ -713,6 +786,10 @@
     let mediaRecorder = null;
     let audioChunks = [];
     let isRecording = false;
+    let audioContext = null;
+    let analyser = null;
+    let dataArray = null;
+    let sourceNode = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -1003,64 +1080,65 @@
     });
 
     // Voice recording
-    voiceButton.addEventListener('mousedown', startRecording);
-    voiceButton.addEventListener('touchstart', (e) => {
-      e.preventDefault();
-      startRecording(e);
+    voiceButton.addEventListener('click', () => {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        startRecording();
+      }
     });
 
-    voiceButton.addEventListener('mouseup', stopRecording);
-    voiceButton.addEventListener('touchend', (e) => {
-      e.preventDefault();
-      stopRecording(e);
-    });
-
-    voiceButton.addEventListener('mouseleave', () => {
-      if (isRecording) stopRecording();
-    });
-
-    async function startRecording(e) {
-      e.preventDefault();
+    function startRecording() {
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        
-        mediaRecorder.ondataavailable = event => {
-          audioChunks.push(event.data);
-        };
+        navigator.mediaDevices.getUserMedia({ audio: true })
+          .then(stream => {
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
 
-        mediaRecorder.onstop = () => {
-          const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-          const audioUrl = URL.createObjectURL(audioBlob);
-          
-          // Get duration (approximate)
-          const audio = new Audio(audioUrl);
-          audio.onloadedmetadata = () => {
-            const duration = Math.floor(audio.duration);
-            
-            // Show locally
-            addMessageToUI({ url: audioUrl, duration }, 'sent', 'You', false, replyTo, null, true);
-            
-            // Convert to base64 to send
-            const reader = new FileReader();
-            reader.onload = () => {
-              const base64Audio = reader.result;
-              socket.emit('chat voice', { 
-                user: username, 
-                voice: base64Audio, 
-                duration: duration,
-                reply: replyTo 
-              });
+            mediaRecorder.ondataavailable = event => {
+              audioChunks.push(event.data);
             };
-            reader.readAsDataURL(audioBlob);
-          };
-        };
 
-        mediaRecorder.start();
-        isRecording = true;
-        voiceButton.classList.add('recording');
-        voiceButton.textContent = '🛑';
+            mediaRecorder.onstop = () => {
+              const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              const audioUrl = URL.createObjectURL(audioBlob);
+
+              // Get duration
+              const audio = new Audio(audioUrl);
+              audio.onloadedmetadata = () => {
+                const duration = Math.floor(audio.duration);
+                
+                // Show locally
+                addMessageToUI({ url: audioUrl, duration }, 'sent', 'You', false, replyTo, null, true);
+                
+                // Convert to base64
+                const reader = new FileReader();
+                reader.onload = () => {
+                  const base64Audio = reader.result;
+                  socket.emit('chat voice', { 
+                    user: username, 
+                    voice: base64Audio, 
+                    duration: duration,
+                    reply: replyTo 
+                  });
+                };
+                reader.readAsDataURL(audioBlob);
+              };
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            voiceButton.classList.add('recording');
+            voiceButton.textContent = '🛑';
+            recordingOverlay.style.display = 'block';
+
+            // Start visualizer
+            initVisualizer(stream);
+          })
+          .catch(err => {
+            alert('Microphone access denied. Please allow mic permission.');
+            console.error('Error accessing microphone:', err);
+          });
       } catch (err) {
         alert('Microphone access denied. Please allow mic permission.');
         console.error('Error accessing microphone:', err);
@@ -1074,8 +1152,48 @@
         isRecording = false;
         voiceButton.classList.remove('recording');
         voiceButton.textContent = '🎤';
+        recordingOverlay.style.display = 'none';
       }
     }
+
+    function initVisualizer(stream) {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+      }
+
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      function draw() {
+        analyser.getByteFrequencyData(dataArray);
+        const bars = document.querySelectorAll('.recording-waveform span');
+        bars.forEach((bar, i) => {
+          bar.style.height = `${dataArray[i] * 2}px`;
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    // Cancel recording
+    cancelRecordingBtn.addEventListener('click', () => {
+      stopRecording();
+    });
+
+    // Send recording
+    sendRecordingBtn.addEventListener('click', () => {
+      if (mediaRecorder && isRecording) {
+        mediaRecorder.stop();
+        mediaRecorder.stream.getTracks().forEach(track => track.stop());
+        isRecording = false;
+        voiceButton.classList.remove('recording');
+        voiceButton.textContent = '🎤';
+        recordingOverlay.style.display = 'none';
+      }
+    });
 
     // Receive text message
     socket.on('chat message', (data) => {
