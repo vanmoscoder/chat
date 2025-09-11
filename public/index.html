@@ -17,7 +17,6 @@
       --received-bg: #2c3e50;
       --input-bg: #3a3a5c;
       --reply-color: #f1c40f;
-      --voice-bg: #5d3a9b;
       --transition: all 0.3s ease;
     }
 
@@ -28,7 +27,7 @@
       --text-color: #2c3e50;
       --received-bg: #f0f0f0;
       --input-bg: #f5f5f5;
-      --voice-bg: #9b59b6;
+      --reply-color: #e67e22;
     }
 
     * {
@@ -197,7 +196,7 @@
       align-self: flex-end;
     }
 
-    /* Reply indicator */
+    /* Reply indicator (we'll reuse for caption) */
     .caption-box {
       display: flex;
       background: rgba(0, 0, 0, 0.08);
@@ -227,48 +226,6 @@
       opacity: 0.75;
       margin-top: 6px;
       display: inline-block;
-    }
-
-    /* Voice Message */
-    .voice-message {
-      background: var(--voice-bg);
-      padding: 12px 16px;
-      border-radius: 16px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      cursor: pointer;
-      user-select: none;
-    }
-
-    .voice-message.playing {
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { opacity: 1; }
-      50% { opacity: 0.7; }
-      100% { opacity: 1; }
-    }
-
-    .voice-wave {
-      display: flex;
-      gap: 2px;
-      height: 24px;
-      align-items: center;
-    }
-
-    .voice-wave span {
-      width: 3px;
-      height: 100%;
-      background: white;
-      border-radius: 2px;
-      opacity: 0.7;
-    }
-
-    .voice-duration {
-      font-size: 0.9rem;
-      font-weight: 500;
     }
 
     /* Links in messages */
@@ -465,92 +422,6 @@
       font-size: 0.95rem;
     }
 
-    /* Voice Recording Button */
-    #voiceButton {
-      margin-right: 8px;
-      background: var(--input-bg);
-      color: var(--text-color);
-      border: none;
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      cursor: pointer;
-      font-size: 1.3rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    #voiceButton.recording {
-      background: #e74c3c;
-      color: white;
-      animation: pulse 1s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
-
-    /* Voice Recording Overlay */
-    #recordingOverlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(0, 0, 0, 0.9);
-      padding: 16px;
-      border-top: 1px solid var(--border-color);
-      display: none;
-      z-index: 1000;
-      border-radius: 16px 16px 0 0;
-    }
-
-    .recording-controls {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .recording-waveform {
-      display: flex;
-      gap: 2px;
-      height: 24px;
-      align-items: center;
-      flex-grow: 1;
-    }
-
-    .recording-waveform span {
-      width: 3px;
-      height: 100%;
-      background: white;
-      border-radius: 2px;
-      opacity: 0.7;
-    }
-
-    .recording-actions {
-      display: flex;
-      gap: 10px;
-    }
-
-    .recording-btn {
-      padding: 8px 16px;
-      background: var(--sent-bg);
-      color: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
-    }
-
-    .cancel-btn {
-      background: var(--received-bg);
-      color: white;
-    }
-
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -649,7 +520,7 @@
         font-size: 0.95rem;
       }
 
-      #attachButton, #sendButton, #voiceButton {
+      #attachButton, #sendButton {
         font-size: 1.3rem;
         width: 44px;
         height: 44px;
@@ -695,7 +566,6 @@
     <div class="input-area">
       <input type="file" id="fileInput" accept="image/*" />
       <button id="attachButton" title="Attach image">📎</button>
-      <button id="voiceButton" title="Record voice">🎤</button>
       <input id="messageInput" type="text" placeholder="Type a message..." />
       <button id="sendButton" title="Send message">➤</button>
     </div>
@@ -737,19 +607,6 @@
     </div>
   </div>
 
-  <!-- Voice Recording Overlay -->
-  <div id="recordingOverlay">
-    <div class="recording-controls">
-      <div class="recording-waveform">
-        <span></span><span></span><span></span><span></span><span></span>
-      </div>
-      <div class="recording-actions">
-        <button class="recording-btn cancel-btn">Cancel</button>
-        <button class="recording-btn">Send</button>
-      </div>
-    </div>
-  </div>
-
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -775,21 +632,10 @@
     const imageCaption = document.getElementById('imageCaption');
     const sendImageBtn = document.getElementById('sendImageBtn');
     const closeImageBtn = document.querySelector('.close-image-btn');
-    const voiceButton = document.getElementById('voiceButton');
-    const recordingOverlay = document.getElementById('recordingOverlay');
-    const cancelRecordingBtn = document.querySelector('.cancel-btn');
-    const sendRecordingBtn = document.querySelector('.recording-btn:not(.cancel-btn)');
 
     let username = null;
     let replyTo = null;
     let pendingLink = null;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let isRecording = false;
-    let audioContext = null;
-    let analyser = null;
-    let dataArray = null;
-    let sourceNode = null;
 
     // Load saved username and theme
     const savedUsername = localStorage.getItem('chat-username');
@@ -848,8 +694,8 @@
       });
     }
 
-    // Add message to UI
-    function addMessageToUI(content, type, sender, isImage = false, reply = null, caption = null, isVoice = false) {
+    // Add message or image to UI
+    function addMessageToUI(content, type, sender, isImage = false, reply = null, caption = null) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
       li.dataset.messageId = Date.now();
@@ -859,31 +705,18 @@
       if (reply) {
         const isReplyImage = reply.type === 'image';
         replyHTML = `
-          <div class="caption-box">
+          <div class="reply-to">
+            <strong>${reply.sender}:</strong>
             ${isReplyImage 
-              ? '<img src="' + reply.content + '" alt="Replied image" style="max-height:40px;border-radius:6px;" />' 
-              : '<span class="caption-text">' + reply.content + '</span>'
+              ? '<img src="' + reply.content + '" alt="Replied image" />' 
+              : '<span class="message-text">' + reply.content + '</span>'
             }
           </div>
         `;
       }
 
       let messageHTML;
-      if (isVoice) {
-        const duration = content.duration || 0;
-        const formattedDuration = `${Math.floor(duration / 60)}:${(duration % 60).toString().padStart(2, '0')}`;
-        messageHTML = `
-          <strong>${sender}:</strong>
-          ${replyHTML}
-          <div class="voice-message" data-audio="${content.url}">
-            <div class="voice-wave">
-              <span></span><span></span><span></span><span></span><span></span>
-            </div>
-            <span class="voice-duration">${formattedDuration}</span>
-          </div>
-          <small>${time}</small>
-        `;
-      } else if (isImage) {
+      if (isImage) {
         let captionHTML = '';
         if (caption && caption.trim()) {
           captionHTML = `
@@ -914,7 +747,7 @@
       // Make message clickable for reply
       li.addEventListener('contextmenu', (e) => {
         e.preventDefault();
-        setReply(sender, content, isImage || isVoice);
+        setReply(sender, content, isImage);
       });
 
       // Make links clickable
@@ -925,14 +758,6 @@
           openLinkSafely(url);
         });
       });
-
-      // Voice message playback
-      if (isVoice) {
-        const voiceEl = li.querySelector('.voice-message');
-        voiceEl.addEventListener('click', () => {
-          playVoiceMessage(voiceEl, content.url);
-        });
-      }
 
       messagesList.appendChild(li);
       messagesList.scrollTop = messagesList.scrollHeight;
@@ -945,36 +770,6 @@
           fullscreenView.style.display = 'flex';
         });
       }
-    }
-
-    // Play voice message
-    function playVoiceMessage(element, url) {
-      // Stop any currently playing
-      document.querySelectorAll('.voice-message.playing').forEach(el => {
-        el.classList.remove('playing');
-        const audio = el.querySelector('audio');
-        if (audio) audio.pause();
-      });
-
-      // Create audio if not exists
-      let audio = element.querySelector('audio');
-      if (!audio) {
-        audio = new Audio(url);
-        audio.style.display = 'none';
-        element.appendChild(audio);
-      }
-
-      element.classList.add('playing');
-      audio.play();
-
-      audio.onended = () => {
-        element.classList.remove('playing');
-      };
-
-      audio.onerror = () => {
-        element.classList.remove('playing');
-        alert('Failed to play voice message.');
-      };
     }
 
     // Set reply
@@ -1079,122 +874,6 @@
       imageCaption.value = '';
     });
 
-    // Voice recording
-    voiceButton.addEventListener('click', () => {
-      if (isRecording) {
-        stopRecording();
-      } else {
-        startRecording();
-      }
-    });
-
-    function startRecording() {
-      try {
-        navigator.mediaDevices.getUserMedia({ audio: true })
-          .then(stream => {
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.ondataavailable = event => {
-              audioChunks.push(event.data);
-            };
-
-            mediaRecorder.onstop = () => {
-              const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-              const audioUrl = URL.createObjectURL(audioBlob);
-
-              // Get duration
-              const audio = new Audio(audioUrl);
-              audio.onloadedmetadata = () => {
-                const duration = Math.floor(audio.duration);
-                
-                // Show locally
-                addMessageToUI({ url: audioUrl, duration }, 'sent', 'You', false, replyTo, null, true);
-                
-                // Convert to base64
-                const reader = new FileReader();
-                reader.onload = () => {
-                  const base64Audio = reader.result;
-                  socket.emit('chat voice', { 
-                    user: username, 
-                    voice: base64Audio, 
-                    duration: duration,
-                    reply: replyTo 
-                  });
-                };
-                reader.readAsDataURL(audioBlob);
-              };
-            };
-
-            mediaRecorder.start();
-            isRecording = true;
-            voiceButton.classList.add('recording');
-            voiceButton.textContent = '🛑';
-            recordingOverlay.style.display = 'block';
-
-            // Start visualizer
-            initVisualizer(stream);
-          })
-          .catch(err => {
-            alert('Microphone access denied. Please allow mic permission.');
-            console.error('Error accessing microphone:', err);
-          });
-      } catch (err) {
-        alert('Microphone access denied. Please allow mic permission.');
-        console.error('Error accessing microphone:', err);
-      }
-    }
-
-    function stopRecording() {
-      if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        isRecording = false;
-        voiceButton.classList.remove('recording');
-        voiceButton.textContent = '🎤';
-        recordingOverlay.style.display = 'none';
-      }
-    }
-
-    function initVisualizer(stream) {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        analyser = audioContext.createAnalyser();
-        analyser.fftSize = 256;
-        dataArray = new Uint8Array(analyser.frequencyBinCount);
-      }
-
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-
-      function draw() {
-        analyser.getByteFrequencyData(dataArray);
-        const bars = document.querySelectorAll('.recording-waveform span');
-        bars.forEach((bar, i) => {
-          bar.style.height = `${dataArray[i] * 2}px`;
-        });
-        requestAnimationFrame(draw);
-      }
-      draw();
-    }
-
-    // Cancel recording
-    cancelRecordingBtn.addEventListener('click', () => {
-      stopRecording();
-    });
-
-    // Send recording
-    sendRecordingBtn.addEventListener('click', () => {
-      if (mediaRecorder && isRecording) {
-        mediaRecorder.stop();
-        mediaRecorder.stream.getTracks().forEach(track => track.stop());
-        isRecording = false;
-        voiceButton.classList.remove('recording');
-        voiceButton.textContent = '🎤';
-        recordingOverlay.style.display = 'none';
-      }
-    });
-
     // Receive text message
     socket.on('chat message', (data) => {
       addMessageToUI(data.message, 'received', data.user, false, data.reply || null);
@@ -1203,11 +882,6 @@
     // Receive image
     socket.on('chat image', (data) => {
       addMessageToUI(data.image, 'received', data.user, true, data.reply || null, data.caption || null);
-    });
-
-    // Receive voice
-    socket.on('chat voice', (data) => {
-      addMessageToUI({ url: data.voice, duration: data.duration }, 'received', data.user, false, data.reply || null, null, true);
     });
 
     // Focus input
