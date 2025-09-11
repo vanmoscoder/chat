@@ -17,6 +17,7 @@
       --received-bg: #2c3e50;
       --input-bg: #3a3a5c;
       --reply-color: #f1c40f;
+      --voice-bg: #ff6b6b;
       --transition: all 0.3s ease;
     }
 
@@ -28,6 +29,7 @@
       --received-bg: #f0f0f0;
       --input-bg: #f5f5f5;
       --reply-color: #e67e22;
+      --voice-bg: #e74c3c;
     }
 
     * {
@@ -196,7 +198,38 @@
       align-self: flex-end;
     }
 
-    /* Reply indicator (we'll reuse for caption) */
+    /* Reply indicator */
+    .reply-to {
+      display: flex;
+      background: rgba(0, 0, 0, 0.08);
+      border-left: 4px solid var(--reply-color);
+      padding: 8px 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
+    .reply-to strong {
+      font-size: 0.95rem;
+      display: block;
+    }
+
+    .reply-to .message-text {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+
+    .reply-to img {
+      max-width: 44px;
+      border-radius: 8px;
+      margin-top: 4px;
+    }
+
+    /* Caption box (reused for voice duration) */
     .caption-box {
       display: flex;
       background: rgba(0, 0, 0, 0.08);
@@ -226,6 +259,37 @@
       opacity: 0.75;
       margin-top: 6px;
       display: inline-block;
+    }
+
+    /* Voice message styling */
+    .voice-message {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: var(--voice-bg);
+      border-radius: 12px;
+      cursor: pointer;
+      color: white;
+    }
+
+    .voice-message.playing {
+      animation: pulse 1s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
+    }
+
+    .voice-message i {
+      font-size: 1.2rem;
+    }
+
+    .voice-duration {
+      font-size: 0.9rem;
+      font-weight: 500;
     }
 
     /* Links in messages */
@@ -422,6 +486,84 @@
       font-size: 0.95rem;
     }
 
+    /* Voice Recording Modal */
+    #voiceModal {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.9);
+      padding: 20px 30px;
+      border-radius: 20px 20px 0 0;
+      z-index: 2500;
+      display: none;
+      text-align: center;
+      backdrop-filter: blur(8px);
+    }
+
+    #voiceModal.show {
+      display: block;
+      animation: slideUp 0.3s ease-out;
+    }
+
+    @keyframes slideUp {
+      from { transform: translate(-50%, 100%); }
+      to { transform: translate(-50%, 0); }
+    }
+
+    #voiceModal h3 {
+      color: white;
+      margin: 0 0 10px 0;
+      font-size: 1.1rem;
+    }
+
+    #waveform {
+      width: 100%;
+      height: 60px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+      margin: 10px 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 2px;
+      padding: 5px;
+    }
+
+    .bar {
+      background: #4a6cf7;
+      width: 4px;
+      height: 2px;
+      border-radius: 2px;
+      transition: height 0.1s;
+    }
+
+    #voiceDuration {
+      color: white;
+      font-size: 0.9rem;
+      margin-bottom: 10px;
+    }
+
+    #cancelVoice, #sendVoice {
+      padding: 8px 16px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+
+    #cancelVoice {
+      background: #e53935;
+      color: white;
+    }
+
+    #sendVoice {
+      background: #4a6cf7;
+      color: white;
+    }
+
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -466,6 +608,22 @@
       flex-shrink: 0;
     }
 
+    #voiceButton {
+      margin-right: 8px;
+      background: var(--input-bg);
+      color: var(--text-color);
+      border: none;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
     #fileInput {
       display: none;
     }
@@ -487,7 +645,9 @@
       flex-shrink: 0;
     }
 
-    #sendButton:hover {
+    #sendButton:hover,
+    #attachButton:hover,
+    #voiceButton:hover {
       opacity: 0.9;
     }
 
@@ -520,7 +680,7 @@
         font-size: 0.95rem;
       }
 
-      #attachButton, #sendButton {
+      #attachButton, #sendButton, #voiceButton {
         font-size: 1.3rem;
         width: 44px;
         height: 44px;
@@ -566,6 +726,7 @@
     <div class="input-area">
       <input type="file" id="fileInput" accept="image/*" />
       <button id="attachButton" title="Attach image">📎</button>
+      <button id="voiceButton" title="Hold to record voice">🎤</button>
       <input id="messageInput" type="text" placeholder="Type a message..." />
       <button id="sendButton" title="Send message">➤</button>
     </div>
@@ -607,6 +768,19 @@
     </div>
   </div>
 
+  <!-- Voice Recording Modal -->
+  <div id="voiceModal">
+    <h3>Recording Voice Message</h3>
+    <div id="waveform">
+      <!-- Bars will be generated by JS -->
+    </div>
+    <div id="voiceDuration">00:00</div>
+    <div>
+      <button id="cancelVoice">Cancel</button>
+      <button id="sendVoice">Send</button>
+    </div>
+  </div>
+
   <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
   <script>
@@ -618,276 +792,10 @@
     const messageInput = document.getElementById('messageInput');
     const sendButton = document.getElementById('sendButton');
     const attachButton = document.getElementById('attachButton');
+    const voiceButton = document.getElementById('voiceButton');
     const fileInput = document.getElementById('fileInput');
     const messagesList = document.getElementById('messages');
     const themeToggle = document.getElementById('themeToggle');
     const fullscreenView = document.getElementById('fullscreenView');
     const fullscreenImg = document.getElementById('fullscreenImg');
-    const linkModal = document.getElementById('linkModal');
-    const linkPreview = document.getElementById('linkPreview');
-    const openLinkBtn = document.getElementById('openLink');
-    const cancelLinkBtn = document.getElementById('cancelLink');
-    const imagePreviewModal = document.getElementById('imagePreviewModal');
-    const previewImage = document.getElementById('previewImage');
-    const imageCaption = document.getElementById('imageCaption');
-    const sendImageBtn = document.getElementById('sendImageBtn');
-    const closeImageBtn = document.querySelector('.close-image-btn');
-
-    let username = null;
-    let replyTo = null;
-    let pendingLink = null;
-
-    // Load saved username and theme
-    const savedUsername = localStorage.getItem('chat-username');
-    const savedTheme = localStorage.getItem('chat-theme') || 'dark';
-
-    if (savedTheme === 'light') {
-      document.body.classList.add('light-mode');
-      themeToggle.textContent = '☀️';
-    }
-
-    if (savedUsername) {
-      username = savedUsername;
-      showChat();
-    }
-
-    // Join chat
-    function joinChat() {
-      const name = usernameInput.value.trim();
-      if (name) {
-        username = name;
-        localStorage.setItem('chat-username', name);
-        showChat();
-      } else {
-        alert('Please enter a username!');
-      }
-    }
-
-    joinButton.addEventListener('click', joinChat);
-    usernameInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') joinChat();
-    });
-
-    function showChat() {
-      usernameModal.style.display = 'none';
-      chatContainer.style.display = 'flex';
-      messageInput.focus();
-    }
-
-    // Theme toggle
-    themeToggle.addEventListener('click', () => {
-      const isLight = document.body.classList.toggle('light-mode');
-      localStorage.setItem('chat-theme', isLight ? 'light' : 'dark');
-      themeToggle.textContent = isLight ? '☀️' : '🌙';
-    });
-
-    // Format time
-    function getCurrentTime() {
-      return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    // Convert URLs to clickable links with warning
-    function makeLinksClickable(text) {
-      const urlRegex = /(https?:\/\/[^\s<]+[^\s<.,;:!)"])/g;
-      return text.replace(urlRegex, (url) => {
-        return `<a href="#" data-url="${url}" class="chat-link">${url}</a>`;
-      });
-    }
-
-    // Add message or image to UI
-    function addMessageToUI(content, type, sender, isImage = false, reply = null, caption = null) {
-      const li = document.createElement('li');
-      li.className = `message ${type}`;
-      li.dataset.messageId = Date.now();
-
-      const time = getCurrentTime();
-      let replyHTML = '';
-      if (reply) {
-        const isReplyImage = reply.type === 'image';
-        replyHTML = `
-          <div class="reply-to">
-            <strong>${reply.sender}:</strong>
-            ${isReplyImage 
-              ? '<img src="' + reply.content + '" alt="Replied image" />' 
-              : '<span class="message-text">' + reply.content + '</span>'
-            }
-          </div>
-        `;
-      }
-
-      let messageHTML;
-      if (isImage) {
-        let captionHTML = '';
-        if (caption && caption.trim()) {
-          captionHTML = `
-            <div class="caption-box">
-              <span class="caption-text">${caption}</span>
-            </div>
-          `;
-        }
-        messageHTML = `
-          <strong>${sender}:</strong>
-          ${replyHTML}
-          <img src="${content}" alt="Shared image" />
-          ${captionHTML}
-          <small>${time}</small>
-        `;
-      } else {
-        const safeContent = makeLinksClickable(content);
-        messageHTML = `
-          <strong>${sender}:</strong>
-          ${replyHTML}
-          <div class="message-text">${safeContent}</div>
-          <small>${time}</small>
-        `;
-      }
-
-      li.innerHTML = messageHTML;
-
-      // Make message clickable for reply
-      li.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        setReply(sender, content, isImage);
-      });
-
-      // Make links clickable
-      li.querySelectorAll('.chat-link').forEach(link => {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          const url = e.target.dataset.url;
-          openLinkSafely(url);
-        });
-      });
-
-      messagesList.appendChild(li);
-      messagesList.scrollTop = messagesList.scrollHeight;
-
-      // Click image to zoom
-      const img = li.querySelector('img[alt="Shared image"]');
-      if (img) {
-        img.addEventListener('click', () => {
-          fullscreenImg.src = img.src;
-          fullscreenView.style.display = 'flex';
-        });
-      }
-    }
-
-    // Set reply
-    function setReply(sender, content, isImage) {
-      replyTo = { sender, content, type: isImage ? 'image' : 'text' };
-      messageInput.placeholder = `Reply to ${sender}...`;
-      messageInput.focus();
-    }
-
-    // Clear reply
-    function clearReply() {
-      replyTo = null;
-      messageInput.placeholder = 'Type a message...';
-    }
-
-    // Fullscreen image close
-    fullscreenView.addEventListener('click', () => {
-      fullscreenView.style.display = 'none';
-    });
-
-    // Safe link warning
-    function openLinkSafely(url) {
-      pendingLink = url;
-      linkPreview.textContent = url;
-      linkModal.style.display = 'flex';
-    }
-
-    openLinkBtn.addEventListener('click', () => {
-      if (pendingLink) {
-        window.open(pendingLink, '_blank');
-        pendingLink = null;
-      }
-      linkModal.style.display = 'none';
-    });
-
-    cancelLinkBtn.addEventListener('click', () => {
-      pendingLink = null;
-      linkModal.style.display = 'none';
-    });
-
-    // Send message
-    function sendMessage() {
-      const message = messageInput.value.trim();
-      if (message) {
-        addMessageToUI(message, 'sent', 'You', false, replyTo);
-        socket.emit('chat message', { user: username, message, reply: replyTo });
-        messageInput.value = '';
-        clearReply();
-      }
-    }
-
-    sendButton.addEventListener('click', sendMessage);
-    messageInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-
-    // Scroll to bottom when input focused (iPhone fix)
-    messageInput.addEventListener('focus', () => {
-      setTimeout(() => {
-        messagesList.scrollTop = messagesList.scrollHeight;
-      }, 300);
-    });
-
-    // Attach image
-    attachButton.addEventListener('click', () => {
-      fileInput.click();
-    });
-
-    fileInput.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-          const imageData = event.target.result;
-          previewImage.src = imageData;
-          imagePreviewModal.style.display = 'block';
-          imageCaption.value = '';
-        };
-        reader.readAsDataURL(file);
-      }
-    });
-
-    // Close image preview
-    closeImageBtn.addEventListener('click', () => {
-      imagePreviewModal.style.display = 'none';
-    });
-
-    // Send image with caption
-    sendImageBtn.addEventListener('click', () => {
-      const caption = imageCaption.value.trim();
-      const imageUrl = previewImage.src;
-
-      addMessageToUI(imageUrl, 'sent', 'You', true, replyTo, caption);
-      socket.emit('chat image', { 
-        user: username, 
-        image: imageUrl, 
-        reply: replyTo,
-        caption: caption 
-      });
-
-      imagePreviewModal.style.display = 'none';
-      imageCaption.value = '';
-    });
-
-    // Receive text message
-    socket.on('chat message', (data) => {
-      addMessageToUI(data.message, 'received', data.user, false, data.reply || null);
-    });
-
-    // Receive image
-    socket.on('chat image', (data) => {
-      addMessageToUI(data.image, 'received', data.user, true, data.reply || null, data.caption || null);
-    });
-
-    // Focus input
-    window.onload = () => {
-      if (username) messageInput.focus();
-    };
-  </script>
-</body>
-</html>
+   
