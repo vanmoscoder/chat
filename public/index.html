@@ -17,7 +17,6 @@
       --received-bg: #2c3e50;
       --input-bg: #3a3a5c;
       --reply-color: #f1c40f;
-      --saved-color: #4a6cf7;
       --transition: all 0.3s ease;
     }
 
@@ -28,7 +27,7 @@
       --text-color: #2c3e50;
       --received-bg: #f0f0f0;
       --input-bg: #f5f5f5;
-      --saved-color: #4a6cf7;
+      --reply-color: #e67e22;
     }
 
     * {
@@ -197,35 +196,22 @@
       align-self: flex-end;
     }
 
-    /* Reply indicator */
-    .reply-to {
+    /* Reply indicator (we'll reuse for caption) */
+    .caption-box {
       display: flex;
       background: rgba(0, 0, 0, 0.08);
       border-left: 4px solid var(--reply-color);
       padding: 8px 12px;
-      margin-bottom: 10px;
+      margin-top: 8px;
       border-radius: 8px;
       font-size: 0.9rem;
     }
 
-    .reply-to strong {
-      font-size: 0.95rem;
-      display: block;
-    }
-
-    .reply-to .message-text {
+    .caption-box .caption-text {
       font-size: 0.9rem;
       opacity: 0.9;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      max-width: 220px;
-    }
-
-    .reply-to img {
-      max-width: 44px;
-      border-radius: 8px;
-      margin-top: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
     }
 
     .message strong {
@@ -352,69 +338,6 @@
 
     .btn-safe {
       background: #4a6cf7;
-      color: white;
-    }
-
-    /* Saved Messages Section */
-    #savedMessages {
-      display: none;
-      padding: 16px;
-      background: var(--bg-secondary);
-      border-top: 1px solid var(--border-color);
-      z-index: 100;
-    }
-
-    #savedMessages h3 {
-      margin-bottom: 12px;
-      font-size: 1.1rem;
-      color: var(--text-color);
-    }
-
-    #savedMessages ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    #savedMessages li {
-      padding: 14px 18px;
-      margin-bottom: 10px;
-      background: var(--bg-primary);
-      border-radius: 16px;
-      color: var(--text-color);
-      font-size: 0.95rem;
-      word-wrap: break-word;
-    }
-
-    #savedMessages li img {
-      max-width: 100%;
-      border-radius: 12px;
-      margin-top: 8px;
-      border: 1px solid rgba(255,255,255,0.15);
-    }
-
-    /* Save Button */
-    .save-button {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 24px;
-      height: 24px;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      color: var(--saved-color);
-      font-size: 1.1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .save-button:hover {
-      opacity: 0.8;
-    }
-
-    .save-button.saved {
       color: white;
     }
 
@@ -648,12 +571,6 @@
     </div>
   </div>
 
-  <!-- Saved Messages Section -->
-  <div id="savedMessages">
-    <h3>Saved Messages</h3>
-    <ul id="savedList"></ul>
-  </div>
-
   <!-- Fullscreen Image Viewer -->
   <div id="fullscreenView" class="fullscreen" style="display: none;">
     <img id="fullscreenImg" src="" alt="Fullscreen Image" />
@@ -715,40 +632,23 @@
     const imageCaption = document.getElementById('imageCaption');
     const sendImageBtn = document.getElementById('sendImageBtn');
     const closeImageBtn = document.querySelector('.close-image-btn');
-    const savedMessages = document.getElementById('savedMessages');
-    const savedList = document.getElementById('savedList');
 
     let username = null;
     let replyTo = null;
     let pendingLink = null;
-    let savedMessagesData = [];
 
-    // Load saved data
-    function loadSavedMessages() {
-      const saved = localStorage.getItem('savedMessages');
-      if (saved) {
-        savedMessagesData = JSON.parse(saved);
-        renderSavedMessages();
-      }
+    // Load saved username and theme
+    const savedUsername = localStorage.getItem('chat-username');
+    const savedTheme = localStorage.getItem('chat-theme') || 'dark';
+
+    if (savedTheme === 'light') {
+      document.body.classList.add('light-mode');
+      themeToggle.textContent = '☀️';
     }
 
-    // Save to localStorage
-    function saveMessages() {
-      localStorage.setItem('savedMessages', JSON.stringify(savedMessagesData));
-    }
-
-    // Render saved messages
-    function renderSavedMessages() {
-      savedList.innerHTML = '';
-      savedMessagesData.forEach(item => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-          <strong>${item.sender}:</strong>
-          ${item.isImage ? `<img src="${item.content}" alt="Saved image" />` : item.content}
-          <small>${item.time}</small>
-        `;
-        savedList.appendChild(li);
-      });
+    if (savedUsername) {
+      username = savedUsername;
+      showChat();
     }
 
     // Join chat
@@ -758,7 +658,6 @@
         username = name;
         localStorage.setItem('chat-username', name);
         showChat();
-        loadSavedMessages(); // Load saved messages on login
       } else {
         alert('Please enter a username!');
       }
@@ -795,7 +694,7 @@
       });
     }
 
-    // Add message to UI
+    // Add message or image to UI
     function addMessageToUI(content, type, sender, isImage = false, reply = null, caption = null) {
       const li = document.createElement('li');
       li.className = `message ${type}`;
@@ -845,23 +744,6 @@
 
       li.innerHTML = messageHTML;
 
-      // Add save button
-      const saveBtn = document.createElement('button');
-      saveBtn.className = 'save-button';
-      saveBtn.innerHTML = '🔖';
-      saveBtn.title = 'Save message';
-      saveBtn.addEventListener('click', () => {
-        const isSaved = li.querySelector('.save-button').classList.contains('saved');
-        if (!isSaved) {
-          saveMessage(li, sender, content, isImage, caption, time);
-          saveBtn.classList.add('saved');
-        } else {
-          removeSavedMessage(li);
-          saveBtn.classList.remove('saved');
-        }
-      });
-      li.appendChild(saveBtn);
-
       // Make message clickable for reply
       li.addEventListener('contextmenu', (e) => {
         e.preventDefault();
@@ -887,33 +769,6 @@
           fullscreenImg.src = img.src;
           fullscreenView.style.display = 'flex';
         });
-      }
-    }
-
-    // Save message
-    function saveMessage(element, sender, content, isImage, caption, time) {
-      const item = {
-        sender,
-        content,
-        isImage,
-        caption,
-        time
-      };
-      savedMessagesData.push(item);
-      saveMessages();
-      renderSavedMessages();
-    }
-
-    // Remove from saved
-    function removeSavedMessage(element) {
-      const index = savedMessagesData.findIndex(item => 
-        item.content === element.querySelector('.message-text').textContent ||
-        item.content === element.querySelector('img').src
-      );
-      if (index > -1) {
-        savedMessagesData.splice(index, 1);
-        saveMessages();
-        renderSavedMessages();
       }
     }
 
