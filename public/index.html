@@ -60,6 +60,67 @@
       }
     }
 
+    /* Tribute Banner */
+    #tributeBanner {
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #000;
+      color: white;
+      padding: 12px 16px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+      border-bottom: 2px solid #333;
+      z-index: 1000;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    #tributeBanner span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #tributeBanner .ribbon {
+      width: 20px;
+      height: 20px;
+      background: #000;
+      border: 2px solid #fff;
+      border-radius: 4px;
+      position: relative;
+    }
+
+    .ribbon::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border: 2px solid #fff;
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    }
+
+    #closeTribute {
+      background: transparent;
+      color: white;
+      border: none;
+      font-size: 1.2rem;
+      cursor: pointer;
+      opacity: 0.8;
+      transition: opacity 0.2s;
+    }
+
+    #closeTribute:hover {
+      opacity: 1;
+    }
+
     /* Username Modal */
     #usernameModal {
       position: fixed;
@@ -196,22 +257,35 @@
       align-self: flex-end;
     }
 
-    /* Reply indicator (we'll reuse for caption) */
-    .caption-box {
+    /* Reply indicator */
+    .reply-to {
       display: flex;
       background: rgba(0, 0, 0, 0.08);
       border-left: 4px solid var(--reply-color);
       padding: 8px 12px;
-      margin-top: 8px;
+      margin-bottom: 10px;
       border-radius: 8px;
       font-size: 0.9rem;
     }
 
-    .caption-box .caption-text {
+    .reply-to strong {
+      font-size: 0.95rem;
+      display: block;
+    }
+
+    .reply-to .message-text {
       font-size: 0.9rem;
       opacity: 0.9;
-      white-space: pre-wrap;
-      word-break: break-word;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+
+    .reply-to img {
+      max-width: 44px;
+      border-radius: 8px;
+      margin-top: 4px;
     }
 
     .message strong {
@@ -543,6 +617,15 @@
   </style>
 </head>
 <body>
+  <!-- Tribute Banner -->
+  <div id="tributeBanner">
+    <span>
+      <div class="ribbon"></div>
+      RIP MSLU PREUNI
+    </span>
+    <button id="closeTribute">×</button>
+  </div>
+
   <!-- Username Modal -->
   <div id="usernameModal">
     <div class="modal-content">
@@ -632,6 +715,8 @@
     const imageCaption = document.getElementById('imageCaption');
     const sendImageBtn = document.getElementById('sendImageBtn');
     const closeImageBtn = document.querySelector('.close-image-btn');
+    const tributeBanner = document.getElementById('tributeBanner');
+    const closeTribute = document.getElementById('closeTribute');
 
     let username = null;
     let replyTo = null;
@@ -888,6 +973,14 @@
     window.onload = () => {
       if (username) messageInput.focus();
     };
+
+    // Close tribute banner
+    closeTribute.addEventListener('click', () => {
+      tributeBanner.style.display = 'none';
+    });
+
+    // Hide banner on first load (optional)
+    // tributeBanner.style.display = 'none'; // Uncomment if you want to hide it by default
   </script>
 </body>
 </html>
